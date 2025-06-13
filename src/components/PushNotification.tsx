@@ -14,9 +14,13 @@ export function PushNotification({
   onMessage,
 }: PushNotificationProps) {
   useEffect(() => {
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+    // Check if browser supports Notifications and service workers
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+      console.warn('Push notifications are not supported in this browser');
+      return;
+    }
 
-    // Solicita permissão se necessário
+    // Request permission if needed
     if (askPermission && Notification.permission === 'default') {
       Notification.requestPermission().then((permission) => {
         if (permission === 'granted') onGranted?.();
@@ -27,17 +31,46 @@ export function PushNotification({
       else if (Notification.permission === 'denied') onDenied?.();
     }
 
-    // Escuta mensagens vindas do service worker
-    const handler = (event: MessageEvent) => {
+    // Handler for push messages from service worker
+    const serviceWorkerHandler = (event: MessageEvent) => {
       if (event.data?.type === 'push') {
         onMessage?.(event.data.data);
       }
     };
 
-    navigator.serviceWorker.addEventListener('message', handler);
+    // Handler for push messages from window (for testing/storybook)
+    const windowHandler = (event: MessageEvent) => {
+      if (event.data?.type === 'push') {
+        onMessage?.(event.data.data);
+      }
+    };
 
+    // Set up event listeners
+    let cleanup: (() => void) | undefined;
+
+    // Add window event listener for testing/storybook
+    window.addEventListener('message', windowHandler);
+
+    // Set up service worker event listener if ready
+    navigator.serviceWorker.ready
+      .then(() => {
+        navigator.serviceWorker.addEventListener('message', serviceWorkerHandler);
+        cleanup = () => {
+          navigator.serviceWorker.removeEventListener('message', serviceWorkerHandler);
+          window.removeEventListener('message', windowHandler);
+        };
+      })
+      .catch(error => {
+        console.error('Service worker registration failed:', error);
+        // Still need to clean up window event listener
+        cleanup = () => {
+          window.removeEventListener('message', windowHandler);
+        };
+      });
+
+    // Clean up function
     return () => {
-      navigator.serviceWorker.removeEventListener('message', handler);
+      if (cleanup) cleanup();
     };
   }, [askPermission, onGranted, onDenied, onMessage]);
 

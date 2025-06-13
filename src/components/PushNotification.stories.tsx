@@ -1,20 +1,21 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { PushNotification } from './PushNotification';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { createSignal } from '../core/createSignal';
 import { Signal } from './Signal';
 
 // Mock Notification API for Storybook
 class MockNotification {
   static permission: NotificationPermission = 'default';
-  static requestPermission: () => Promise<NotificationPermission> = async () => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        MockNotification.permission = 'granted';
-        resolve('granted');
-      }, 1000);
-    });
-  };
+  static requestPermission: () => Promise<NotificationPermission> =
+    async () => {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          MockNotification.permission = 'granted';
+          resolve('granted');
+        }, 1000);
+      });
+    };
 }
 
 // Save original Notification
@@ -32,8 +33,8 @@ const mockServiceWorker = {
     console.log(`Removed ${event} event listener`);
   },
   ready: Promise.resolve({
-    active: {}
-  })
+    active: {},
+  }),
 };
 
 // Save original serviceWorker
@@ -42,7 +43,7 @@ const originalServiceWorker = navigator.serviceWorker;
 // Override serviceWorker for Storybook
 Object.defineProperty(navigator, 'serviceWorker', {
   value: mockServiceWorker,
-  configurable: true
+  configurable: true,
 });
 
 const meta = {
@@ -58,26 +59,49 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // Basic PushNotification example
+const [status, setStatus] = createSignal<string>('Waiting for permission...');
+const [messages, setMessages] = createSignal<string[]>([]);
+
 const BasicPushNotificationExample = () => {
-  const [status, setStatus] = createSignal<string>('Waiting for permission...');
-  const [messages, setMessages] = createSignal<string[]>([]);
 
   const addMessage = (message: string) => {
-    setMessages(prev => [...prev, message]);
+    setMessages((prev) => [...prev, message]);
   };
 
   const simulatePushMessage = () => {
-    // Create a mock push event
-    const pushEvent = new Event('push') as any;
+    // Create a mock message event that matches what the component expects
+    const mockData = {
+      type: 'push',
+      data: { message: 'You have a new message!' }
+    };
 
-    // Dispatch the event to the service worker
+    // Simulate a message from the service worker
     setTimeout(() => {
+      // Dispatch a message event that the component will recognize
+      if (navigator.serviceWorker.controller) {
+        // This simulates the service worker sending a message to the client
+        window.dispatchEvent(
+          new MessageEvent('message', {
+            data: mockData,
+            source: navigator.serviceWorker.controller
+          })
+        );
+      }
+
+      // Also add a message to our UI log
       addMessage('Received push notification: "You have a new message!"');
     }, 500);
   };
 
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px', width: '400px' }}>
+    <div
+      style={{
+        padding: '20px',
+        border: '1px solid #ccc',
+        borderRadius: '4px',
+        width: '400px',
+      }}
+    >
       <h3>Basic Push Notification Example</h3>
 
       <PushNotification
@@ -98,14 +122,20 @@ const BasicPushNotificationExample = () => {
       <div style={{ marginTop: '10px', marginBottom: '10px' }}>
         <Signal value={status}>
           {(currentStatus) => (
-            <div style={{ 
-              display: 'inline-block', 
-              padding: '5px 10px', 
-              backgroundColor: currentStatus === 'Permission granted' ? '#4CAF50' : 
-                              currentStatus === 'Permission denied' ? '#F44336' : '#FFC107',
-              color: 'white',
-              borderRadius: '4px'
-            }}>
+            <div
+              style={{
+                display: 'inline-block',
+                padding: '5px 10px',
+                backgroundColor:
+                  currentStatus === 'Permission granted'
+                    ? '#4CAF50'
+                    : currentStatus === 'Permission denied'
+                      ? '#F44336'
+                      : '#FFC107',
+                color: 'white',
+                borderRadius: '4px',
+              }}
+            >
               {currentStatus}
             </div>
           )}
@@ -113,7 +143,7 @@ const BasicPushNotificationExample = () => {
       </div>
 
       <div style={{ marginTop: '10px', marginBottom: '10px' }}>
-        <button 
+        <button
           onClick={simulatePushMessage}
           style={{ padding: '8px 12px' }}
           disabled={status() !== 'Permission granted'}
@@ -126,20 +156,28 @@ const BasicPushNotificationExample = () => {
         <h4>Events:</h4>
         <Signal value={messages}>
           {(messageList) => (
-            <ul style={{ 
-              maxHeight: '200px', 
-              overflow: 'auto', 
-              padding: '10px', 
-              backgroundColor: '#f5f5f5', 
-              borderRadius: '4px',
-              margin: 0,
-              listStyleType: 'none'
-            }}>
+            <ul
+              style={{
+                maxHeight: '200px',
+                overflow: 'auto',
+                padding: '10px',
+                backgroundColor: '#f5f5f5',
+                borderRadius: '4px',
+                margin: 0,
+                listStyleType: 'none',
+              }}
+            >
               {messageList.map((msg, index) => (
-                <li key={index} style={{ 
-                  padding: '5px',
-                  borderBottom: index < messageList.length - 1 ? '1px solid #ddd' : 'none'
-                }}>
+                <li
+                  key={index}
+                  style={{
+                    padding: '5px',
+                    borderBottom:
+                      index < messageList.length - 1
+                        ? '1px solid #ddd'
+                        : 'none',
+                  }}
+                >
                   {msg}
                 </li>
               ))}
@@ -152,28 +190,81 @@ const BasicPushNotificationExample = () => {
 };
 
 // Notification Center example
+const [permissionStatus, setPermissionStatus] =
+  createSignal<NotificationPermission>('default');
+const [notifications, setNotifications] = createSignal<
+  { id: number; title: string; body: string; read: boolean }[]
+>([
+  {
+    id: 1,
+    title: 'Welcome',
+    body: 'Welcome to the notification center!',
+    read: false,
+  },
+  {
+    id: 2,
+    title: 'New Feature',
+    body: 'Check out our new features',
+    read: true,
+  },
+]);
 const NotificationCenterExample = () => {
-  const [permissionStatus, setPermissionStatus] = createSignal<NotificationPermission>('default');
-  const [notifications, setNotifications] = createSignal<{id: number, title: string, body: string, read: boolean}[]>([
-    { id: 1, title: 'Welcome', body: 'Welcome to the notification center!', read: false },
-    { id: 2, title: 'New Feature', body: 'Check out our new features', read: true }
-  ]);
+
 
   const addNotification = (title: string, body: string) => {
-    const newId = notifications().length > 0 ? Math.max(...notifications().map(n => n.id)) + 1 : 1;
-    setNotifications(prev => [...prev, { id: newId, title, body, read: false }]);
+    const newId =
+      notifications().length > 0
+        ? Math.max(...notifications().map((n) => n.id)) + 1
+        : 1;
+    setNotifications((prev) => [
+      ...prev,
+      { id: newId, title, body, read: false },
+    ]);
   };
 
   const markAsRead = (id: number) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+    );
   };
 
   const simulateNewNotification = () => {
-    addNotification('New Message', 'You have received a new message from the system.');
+    // Create a mock message event that matches what the component expects
+    const mockData = {
+      type: 'push',
+      data: { 
+        title: 'New Message',
+        body: 'You have received a new message from the system.'
+      }
+    };
+
+    // Simulate a message from the service worker
+    if (navigator.serviceWorker.controller) {
+      // This simulates the service worker sending a message to the client
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: mockData,
+          source: navigator.serviceWorker.controller
+        })
+      );
+    }
+
+    // Also add to our UI notification center
+    addNotification(
+      'New Message',
+      'You have received a new message from the system.',
+    );
   };
 
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px', width: '500px' }}>
+    <div
+      style={{
+        padding: '20px',
+        border: '1px solid #ccc',
+        borderRadius: '4px',
+        width: '500px',
+      }}
+    >
       <h3>Notification Center Example</h3>
 
       <PushNotification
@@ -190,23 +281,37 @@ const NotificationCenterExample = () => {
         }}
       />
 
-      <div style={{ marginTop: '10px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        style={{
+          marginTop: '10px',
+          marginBottom: '20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <Signal value={permissionStatus}>
           {(status) => (
-            <div style={{ 
-              display: 'inline-block', 
-              padding: '5px 10px', 
-              backgroundColor: status === 'granted' ? '#4CAF50' : 
-                              status === 'denied' ? '#F44336' : '#FFC107',
-              color: 'white',
-              borderRadius: '4px'
-            }}>
+            <div
+              style={{
+                display: 'inline-block',
+                padding: '5px 10px',
+                backgroundColor:
+                  status === 'granted'
+                    ? '#4CAF50'
+                    : status === 'denied'
+                      ? '#F44336'
+                      : '#FFC107',
+                color: 'white',
+                borderRadius: '4px',
+              }}
+            >
               Notification Status: {status}
             </div>
           )}
         </Signal>
 
-        <button 
+        <button
           onClick={simulateNewNotification}
           style={{ padding: '8px 12px' }}
         >
@@ -218,42 +323,54 @@ const NotificationCenterExample = () => {
         <h4>Notification Center:</h4>
         <Signal value={notifications}>
           {(notificationList) => (
-            <div style={{ 
-              maxHeight: '300px', 
-              overflow: 'auto', 
-              padding: '10px', 
-              backgroundColor: '#f5f5f5', 
-              borderRadius: '4px'
-            }}>
+            <div
+              style={{
+                maxHeight: '300px',
+                overflow: 'auto',
+                padding: '10px',
+                backgroundColor: '#f5f5f5',
+                borderRadius: '4px',
+              }}
+            >
               {notificationList.length === 0 ? (
-                <div style={{ padding: '10px', textAlign: 'center', color: '#666' }}>
+                <div
+                  style={{
+                    padding: '10px',
+                    textAlign: 'center',
+                    color: '#666',
+                  }}
+                >
                   No notifications
                 </div>
               ) : (
                 notificationList.map((notification) => (
-                  <div 
-                    key={notification.id} 
-                    style={{ 
-                      padding: '10px', 
-                      margin: '5px 0', 
-                      backgroundColor: notification.read ? '#fff' : '#e3f2fd', 
+                  <div
+                    key={notification.id}
+                    style={{
+                      padding: '10px',
+                      margin: '5px 0',
+                      backgroundColor: notification.read ? '#fff' : '#e3f2fd',
                       borderRadius: '4px',
-                      borderLeft: notification.read ? '3px solid #ccc' : '3px solid #2196F3',
-                      cursor: 'pointer'
+                      borderLeft: notification.read
+                        ? '3px solid #ccc'
+                        : '3px solid #2196F3',
+                      cursor: 'pointer',
                     }}
                     onClick={() => markAsRead(notification.id)}
                   >
                     <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>
                       {notification.title}
                       {!notification.read && (
-                        <span style={{ 
-                          display: 'inline-block', 
-                          width: '8px', 
-                          height: '8px', 
-                          borderRadius: '50%', 
-                          backgroundColor: '#2196F3', 
-                          marginLeft: '5px' 
-                        }}></span>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: '#2196F3',
+                            marginLeft: '5px',
+                          }}
+                        ></span>
                       )}
                     </div>
                     <div style={{ color: '#666' }}>{notification.body}</div>
@@ -342,7 +459,7 @@ export const Cleanup = () => {
       window.Notification = OriginalNotification;
       Object.defineProperty(navigator, 'serviceWorker', {
         value: originalServiceWorker,
-        configurable: true
+        configurable: true,
       });
     };
   }, []);
