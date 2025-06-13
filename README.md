@@ -212,6 +212,41 @@ Reflex includes many other useful components:
 - **Action**: Declarative side effects
 - **BindInput/BindText**: Two-way binding for form elements
 
+## Philosophy
+
+The main philosophy of Reflex is to avoid mixing imperative code with declarative code, even when using JSX elements with arrow functions. This separation makes your code more maintainable, easier to reason about, and less prone to bugs.
+
+Traditional React components often mix imperative logic (like state updates, side effects, and event handlers) with declarative UI rendering. This can lead to complex, hard-to-maintain components. Reflex provides a more structured approach by encapsulating common patterns in declarative components.
+
+## Roadmap
+
+Reflex is actively being developed with several exciting features on the horizon:
+
+### Server-Side Rendering (SSR) Support
+
+We're working on adding full SSR support to make Reflex compatible with frameworks like Next.js and Remix. This will allow you to use Reflex components in server-rendered applications.
+
+### More Common APIs
+
+We're expanding our library to include more declarative wrappers for common browser APIs and patterns that developers frequently need to reimplement, such as:
+
+- Form validation
+- Internationalization (i18n)
+- Authentication flows
+- Drag and drop
+- Keyboard shortcuts
+- Clipboard operations
+- Local storage/session storage
+
+### External Library Adapters
+
+To improve interoperability with the React ecosystem, we're developing adapters for popular external libraries. These adapters will provide a consistent, declarative interface for using third-party components within the Reflex philosophy:
+
+- UI component libraries (Material UI, Chakra UI, etc.)
+- Animation libraries (Framer Motion, React Spring)
+- Form libraries (React Hook Form, Formik)
+- State management libraries (Redux, Zustand, Jotai)
+
 ## Requirements
 
 - React 19 or higher
