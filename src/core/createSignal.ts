@@ -1,35 +1,44 @@
-// Tipo para funções que reagem a mudanças
+// core/createSignal.ts
+import { unstable_batchedUpdates } from 'react-dom';
+
 export type Subscriber = () => void;
 
-// Variável global usada para rastrear quem está lendo o signal
-let currentTracker: Subscriber | null = null;
+export type SignalRead<T> = {
+  (): T;
+  subscribe(fn: Subscriber): () => void;
+};
 
-/**
- * Cria um signal reativo com getter e setter
- */
-export function createSignal<T>(initial: T) {
+export function createSignal<T>(initial: T): readonly [SignalRead<T>, (next: T) => void] {
   let value = initial;
   const subscribers = new Set<Subscriber>();
 
-  const read = () => {
-    // Se alguém estiver rastreando (ex: <Signal />), registramos como dependente
-    if (currentTracker) subscribers.add(currentTracker);
+  const read = (() => {
+    if (currentTracker) {
+      subscribers.add(currentTracker);
+    }
     return value;
+  }) as SignalRead<T>;
+
+  read.subscribe = (fn: Subscriber): (() => void) => {
+    subscribers.add(fn);
+    return () => {
+      subscribers.delete(fn);
+    };
   };
 
   const write = (next: T) => {
+    if (Object.is(value, next)) return;
     value = next;
-    // Notifica todos os componentes/subscritores que dependem deste signal
-    subscribers.forEach((fn) => fn());
+    unstable_batchedUpdates(() => {
+      subscribers.forEach(fn => fn());
+    });
   };
 
   return [read, write] as const;
 }
 
-/**
- * Rastreia dependências de uma função `readFn`,
- * conectando-a como dependente para ser reexecutada em mudanças.
- */
+let currentTracker: Subscriber | null = null;
+
 export function trackSignal(subscriber: Subscriber, readFn: () => void) {
   currentTracker = subscriber;
   readFn();

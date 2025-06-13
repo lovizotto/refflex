@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Action } from './Action';
 import { createSignal } from '../core/createSignal';
 import { Signal } from './Signal';
-import { OnUpdate } from './OnUpdate';
 
 const meta = {
   title: 'Components/Action',
@@ -22,18 +21,18 @@ const ActionExample = () => {
   const [lastAction, setLastAction] = createSignal('None');
 
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}>
+    <div
+      style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}
+    >
       <h3>Action Component Example</h3>
-      <Signal value={count}>
-        {(value) => <p>Count: {value}</p>}
-      </Signal>
+      <Signal value={count}>{(value) => <p>Count: {value}</p>}</Signal>
       <Signal value={lastAction}>
         {(value) => <p>Last Action: {value}</p>}
       </Signal>
 
       <button onClick={() => setCount(count() + 1)}>Increment Count</button>
 
-      <Action 
+      <Action
         watch={() => count()}
         onTrigger={(value) => setLastAction(`Count changed to ${value}`)}
       />
@@ -48,17 +47,21 @@ const MultiWatchExample = () => {
   const [log, setLog] = createSignal<string[]>([]);
 
   const addLog = (message: string) => {
-    setLog(prev => [message, ...prev].slice(0, 5));
+    setLog((prev) => [message, ...prev].slice(0, 5));
   };
 
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}>
+    <div
+      style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}
+    >
       <h3>Multiple Watch Example</h3>
 
       <div style={{ marginBottom: '10px' }}>
         <Signal value={count}>
           {(value) => (
-            <button onClick={() => setCount(count() + 1)}>Count: {value}</button>
+            <button onClick={() => setCount(count() + 1)}>
+              Count: {value}
+            </button>
           )}
         </Signal>
       </div>
@@ -66,10 +69,10 @@ const MultiWatchExample = () => {
       <div style={{ marginBottom: '10px' }}>
         <Signal value={name}>
           {(value) => (
-            <input 
-              type="text" 
-              value={value} 
-              onChange={(e) => setName(e.target.value)} 
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Enter name"
             />
           )}
@@ -80,7 +83,15 @@ const MultiWatchExample = () => {
         <h4>Action Log:</h4>
         <Signal value={log}>
           {(logEntries) => (
-            <ul style={{ maxHeight: '150px', overflow: 'auto', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+            <ul
+              style={{
+                maxHeight: '150px',
+                overflow: 'auto',
+                padding: '10px',
+                backgroundColor: '#f5f5f5',
+                borderRadius: '4px',
+              }}
+            >
               {logEntries.map((entry, index) => (
                 <li key={index}>{entry}</li>
               ))}
@@ -89,7 +100,7 @@ const MultiWatchExample = () => {
         </Signal>
       </div>
 
-      <Action 
+      <Action
         watch={[() => count(), () => name()]}
         onTrigger={(values) => {
           if (Array.isArray(values)) {
@@ -107,20 +118,22 @@ const ImmediateActionExample = () => {
   const [logs, setLogs] = createSignal<string[]>(['Component mounted']);
 
   const addLog = (message: string) => {
-    setLogs(prev => [message, ...prev].slice(0, 5));
+    setLogs((prev) => [message, ...prev].slice(0, 5));
   };
 
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}>
+    <div
+      style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}
+    >
       <h3>Immediate Action Example</h3>
-      <Signal value={count}>
-        {(value) => <p>Count: {value}</p>}
-      </Signal>
+      <Signal value={count}>{(value) => <p>Count: {value}</p>}</Signal>
 
-      <button onClick={() => {
-        setCount(count() + 1);
-        addLog(`Button clicked: count set to ${count()}`);
-      }}>
+      <button
+        onClick={() => {
+          setCount(count() + 1);
+          addLog(`Button clicked: count set to ${count()}`);
+        }}
+      >
         Increment Count
       </button>
 
@@ -128,7 +141,15 @@ const ImmediateActionExample = () => {
         <h4>Logs:</h4>
         <Signal value={logs}>
           {(logEntries) => (
-            <ul style={{ maxHeight: '150px', overflow: 'auto', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+            <ul
+              style={{
+                maxHeight: '150px',
+                overflow: 'auto',
+                padding: '10px',
+                backgroundColor: '#f5f5f5',
+                borderRadius: '4px',
+              }}
+            >
               {logEntries.map((entry, index) => (
                 <li key={index}>{entry}</li>
               ))}
@@ -137,7 +158,7 @@ const ImmediateActionExample = () => {
         </Signal>
       </div>
 
-      <Action 
+      <Action
         watch={() => count()}
         onTrigger={(value) => addLog(`Action triggered: count = ${value}`)}
         immediate={true}

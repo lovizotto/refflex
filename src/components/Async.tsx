@@ -1,4 +1,4 @@
-import { useEffect, useState, isValidElement, ReactNode } from 'react';
+import React, { useEffect, useState, isValidElement, ReactNode } from 'react';
 
 type AsyncProps<T> = {
   task: () => Promise<T>;
@@ -8,7 +8,7 @@ type AsyncProps<T> = {
 export function Async<T>({ task, children }: AsyncProps<T>) {
   const [state, setState] = useState<'pending' | 'fulfilled' | 'rejected'>('pending');
   const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<Error | unknown>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -34,14 +34,14 @@ export function Async<T>({ task, children }: AsyncProps<T>) {
 
   const childArray = Array.isArray(children) ? children : [children];
 
-  const Pending = childArray.find((c) => isValidElement(c) && c.type === AsyncPending);
-  const Fulfilled = childArray.find((c) => isValidElement(c) && c.type === AsyncFulfilled);
-  const Rejected = childArray.find((c) => isValidElement(c) && c.type === AsyncRejected);
+  const Pending = childArray.find((c) => isValidElement(c) && c.type === AsyncPending) as React.ReactElement<{ children: ReactNode }> | undefined;
+  const Fulfilled = childArray.find((c) => isValidElement(c) && c.type === AsyncFulfilled) as React.ReactElement<{ children: (data: T) => ReactNode }> | undefined;
+  const Rejected = childArray.find((c) => isValidElement(c) && c.type === AsyncRejected) as React.ReactElement<{ children: (error: Error | unknown) => ReactNode }> | undefined;
 
   if (state === 'pending') return <>{Pending}</>;
   if (state === 'fulfilled') {
     return <>{isValidElement(Fulfilled) && typeof Fulfilled.props.children === 'function'
-      ? Fulfilled.props.children(data)
+      ? Fulfilled.props.children(data as T)
       : Fulfilled}</>;
   }
   if (state === 'rejected') {
@@ -54,6 +54,10 @@ export function Async<T>({ task, children }: AsyncProps<T>) {
 }
 
 export const AsyncPending = ({ children }: { children: ReactNode }) => <>{children}</>;
-export const AsyncFulfilled = ({ children }: { children: (data: any) => ReactNode }) => null;
-export const AsyncRejected = ({ children }: { children: (error: any) => ReactNode }) => null;
+export const AsyncFulfilled = <T = unknown,>({}: {
+  children: (data: T) => ReactNode;
+}) => null;
+export const AsyncRejected = ({}: {
+  children: (error: Error | unknown) => ReactNode;
+}) => null;
 export const EndAsync = () => null;
