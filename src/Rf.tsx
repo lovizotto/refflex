@@ -22,6 +22,7 @@ import { BindText } from './components/BindText.tsx';
 import { Portal } from './components/Portal.tsx';
 import { OnResize } from './components/OnResize.tsx';
 import { VirtualList } from './components/VirtualList.tsx';
+import { Action } from './components/Action.tsx';
 
 export const Rf = {
   createSignal,
@@ -55,5 +56,6 @@ export const Rf = {
   BindText,
   Portal,
   OnResize,
-  VirtualList
+  VirtualList,
+  Action
 };

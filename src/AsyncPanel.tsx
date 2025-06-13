@@ -1,7 +1,6 @@
 import { Rf } from './Rf.tsx';
 
 import { createSignal } from './core/createSignal.ts';
-import { BindInput } from './components/BindInput.tsx';
 
 const fetchTodos = async (url: string) => {
   return await fetch(url)
@@ -19,11 +18,9 @@ const StatusEnum = {
   confirmado: 'confirmado',
   cancelado: 'cancelado',
 };
+const [name, setName] = createSignal('');
 
 export default function AsyncPanel() {
-  const [name, setName] = createSignal('');
-  const [age, setAge] = createSignal('');
-
   return (
     <div className="async-panel">
       <h2>Async Panel</h2>
@@ -54,7 +51,12 @@ export default function AsyncPanel() {
       <Rf.Async
         task={() => fetchTodos('https://jsonplaceholder.typicode.com/posts')}
       >
-        <Rf.Fulfilled>
+        <Rf.Fulfilled<
+          {
+            id: number;
+            title: string;
+          }[]
+        >>
           {(data) => (
             <Rf.Loop each={data}>
               {(

@@ -2,13 +2,25 @@ import { Rf } from './Rf.tsx';
 import { createSignal } from './core/createSignal.ts';
 
 const [windowSize, setWindowSize] = createSignal({ width: 0, height: 0 });
-const [windowSize2, setWindowSize2] = createSignal({ width: 0, height: 0 });
+const [, setWindowSize2] = createSignal({ width: 0, height: 0 });
+const [users, ] = createSignal([
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' },
+  { id: 3, name: 'Charlie' },
+]);
 
 function App() {
   return (
     <>
       {/*<AsyncPanel />*/}
-      <Rf.OnMount do={() => setWindowSize2({ width: window.innerWidth, height: window.innerHeight })} />
+      <Rf.OnMount
+        do={() =>
+          setWindowSize2({
+            width: window.innerWidth,
+            height: window.innerHeight,
+          })
+        }
+      />
       <Rf.OnResize
         on={({ width, height }) => {
           setWindowSize({ width, height });
@@ -25,15 +37,15 @@ function App() {
         )}
       </Rf.Signal>
 
-      <Rf.Signal value={windowSize2}>
-        {(size) => (
-          <div className="window-size">
-            <h2>Window Size 2</h2>
-            <p>Width: {size.width}px</p>
-            <p>Height: {size.height}px</p>
+      <Rf.Loop each={users} keyExtractor={(user) => user.id}>
+        {(user) => (
+          <div className="item">
+            <h3>
+              {user.id} - {user.name}
+            </h3>
           </div>
         )}
-      </Rf.Signal>
+      </Rf.Loop>
     </>
   );
 }

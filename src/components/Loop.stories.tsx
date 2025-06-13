@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Loop } from './Loop';
 import { useState } from 'react';
+import { Loop } from './Loop';
 import { createSignal } from '../core/createSignal';
 
 const meta = {
@@ -10,117 +10,161 @@ const meta = {
     layout: 'centered',
   },
   tags: ['autodocs'],
+  argTypes: {
+    each: {
+      control: false,
+      description: 'The array to iterate over. Can be a plain array or a signal getter for an array.',
+    },
+    children: {
+      control: false,
+      description: 'A render function that receives `(item, index, key)` and returns a ReactNode for each item.',
+    },
+    keyExtractor: {
+      control: false,
+      description: 'Optional. A function to extract a unique `key` from each item: `(item, index) => React.Key`. Defaults to `item.id` or `index`.',
+    },
+  },
 } satisfies Meta<typeof Loop>;
 
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj<typeof Loop>;
 
-// Example component that uses Loop with static data
-const LoopExample = () => {
+// --- Examples ---
+
+const StaticLoopExample = () => {
   const fruits = ['Apple', 'Banana', 'Cherry', 'Date', 'Elderberry'];
-  
+
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}>
-      <h3>Loop Component Example</h3>
-      <div>
-        <h4>Fruit List:</h4>
-        <ul>
-          <Loop each={() => fruits}>
-            {(fruit, index) => (
-              <li key={index}>
-                {index + 1}. {fruit}
-              </li>
-            )}
-          </Loop>
-        </ul>
-      </div>
+    <div className="p-5 border border-gray-300 rounded">
+      <h3>Loop com Array Estático</h3>
+      <p>
+        <small>
+          Exemplo de `Loop` com um array fixo. Não reage a mudanças pois a referência não muda.
+        </small>
+      </p>
+      <ul>
+        <Loop each={fruits}>
+          {(fruit, index, key) => (
+            <li key={key}>
+              {index + 1}. {fruit}
+            </li>
+          )}
+        </Loop>
+      </ul>
     </div>
   );
 };
 
-// Example component that uses Loop with dynamic data
 const DynamicLoopExample = () => {
-  const [items, setItems] = useState(['Item 1', 'Item 2', 'Item 3']);
-  const [newItem, setNewItem] = useState('');
-  
+  const [items, setItems] = useState([
+    { id: 'a', text: 'Item 1' },
+    { id: 'b', text: 'Item 2' },
+    { id: 'c', text: 'Item 3' },
+  ]);
+  const [newText, setNewText] = useState('');
+
   const addItem = () => {
-    if (newItem.trim()) {
-      setItems([...items, newItem.trim()]);
-      setNewItem('');
-    }
+    const text = newText.trim();
+    if (!text) return;
+    setItems(prev => [...prev, { id: String(Date.now()), text }]);
+    setNewText('');
   };
-  
-  const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+
+  const removeItem = (id: string) => {
+    setItems(prev => prev.filter(item => item.id !== id));
   };
-  
+
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}>
-      <h3>Dynamic Loop Example</h3>
+    <div className="p-5 border border-gray-300 rounded">
+      <h3>Loop com Array Dinâmico (useState)</h3>
+      <p>
+        <small>
+          Exemplo de `Loop` com `useState`. Sempre que `items` muda de
+          referência, o `Loop` re-renderiza.
+        </small>
+      </p>
       <div>
-        <input 
-          type="text" 
-          value={newItem} 
-          onChange={(e) => setNewItem(e.target.value)}
-          placeholder="Add new item"
-          style={{ marginRight: '8px' }}
+        <input
+          value={newText}
+          onChange={(e) => setNewText(e.target.value)}
+          placeholder="Novo item"
+          className="mr-2"
         />
-        <button onClick={addItem}>Add</button>
+        <button onClick={addItem}>Adicionar</button>
       </div>
-      
-      <div style={{ marginTop: '10px' }}>
-        <h4>Items:</h4>
-        <ul>
-          <Loop each={() => items}>
-            {(item, index) => (
-              <li key={index} style={{ marginBottom: '8px' }}>
-                {item}
-                <button 
-                  onClick={() => removeItem(index)}
-                  style={{ marginLeft: '8px', fontSize: '12px' }}
-                >
-                  Remove
-                </button>
-              </li>
-            )}
-          </Loop>
-        </ul>
-      </div>
+      <ul className="mt-2.5">
+        <Loop each={items} keyExtractor={(item) => item.id}>
+          {(item, _idx, key) => (
+            <li key={key} className="mb-2">
+              {item.text}
+              <button
+                onClick={() => removeItem(item.id)}
+                className="ml-2 text-xs"
+              >
+                Remover
+              </button>
+            </li>
+          )}
+        </Loop>
+      </ul>
     </div>
   );
 };
 
-// Example component that uses Loop with a signal
+const [numbers, setNumbers] = createSignal([1, 2, 3]);
 const SignalLoopExample = () => {
-  const [count, setCount] = createSignal(5);
-  
+
+  const [input, setInput] = useState('');
+
+  const addNumber = () => {
+    const n = parseInt(input, 10);
+    if (isNaN(n)) return;
+    setNumbers([...numbers(), n]);
+    setInput('');
+  };
+
+  const removeLast = () => {
+    setNumbers(numbers().slice(0, -1));
+  };
+
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}>
-      <h3>Signal Loop Example</h3>
+    <div className="p-5 border border-gray-300 rounded">
+      <h3>Loop com Signal (Reativo)</h3>
+      <p>
+        <small>
+          Exemplo de `Loop` com signal getter. Apenas o próprio `Loop` re-renderiza quando o signal muda.
+        </small>
+      </p>
       <div>
-        <button onClick={() => setCount(Math.max(1, count() - 1))}>-</button>
-        <span style={{ margin: '0 10px' }}>Count: {count()}</span>
-        <button onClick={() => setCount(count() + 1)}>+</button>
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          placeholder="Número"
+          type="number"
+          className="mr-2"
+        />
+        <button onClick={addNumber}>Adicionar</button>
+        <button onClick={removeLast} className="ml-2">
+          Remover Último
+        </button>
       </div>
-      
-      <div style={{ marginTop: '10px' }}>
-        <h4>Generated Numbers:</h4>
-        <ul>
-          <Loop each={() => Array.from({ length: count() }, (_, i) => i + 1)}>
-            {(num, index) => (
-              <li key={index}>
-                Number {num} (index: {index})
-              </li>
-            )}
-          </Loop>
-        </ul>
-      </div>
+      <ul className="mt-2.5">
+        <Loop each={numbers}>
+          {(num, idx, key) => (
+            <li key={key}>
+              Número {num} (idx: {idx})
+            </li>
+          )}
+        </Loop>
+      </ul>
     </div>
   );
 };
+
+// --- Stories ---
 
 export const Default: Story = {
-  render: () => <LoopExample />,
+  render: () => <StaticLoopExample />,
 };
 
 export const Dynamic: Story = {
@@ -131,54 +175,23 @@ export const WithSignal: Story = {
   render: () => <SignalLoopExample />,
 };
 
-export const WithDescription: Story = {
+export const Combined: Story = {
   render: () => (
-    <div>
-      <LoopExample />
-      <div style={{ height: '20px' }} />
+    <>
+      <StaticLoopExample />
+      <div className="h-5" />
+      <DynamicLoopExample />
+      <div className="h-5" />
       <SignalLoopExample />
-    </div>
+    </>
   ),
   parameters: {
     docs: {
       description: {
         story: `
-The Loop component is a helper for rendering lists of items.
-
-\`\`\`tsx
-import { Loop } from './components/Loop';
-
-// Static array
-const fruits = ['Apple', 'Banana', 'Cherry'];
-
-// Use the Loop component to render a list
-<ul>
-  <Loop each={() => fruits}>
-    {(fruit, index) => (
-      <li key={index}>{fruit}</li>
-    )}
-  </Loop>
-</ul>
-
-// With signals
-const [items, setItems] = createSignal(['Item 1', 'Item 2']);
-
-<Loop each={items}>
-  {(item, index) => (
-    <div key={index}>{item}</div>
-  )}
-</Loop>
-\`\`\`
-
-The Loop component takes two props:
-- \`each\`: A function that returns an array of items to render
-- \`children\`: A render function that receives each item and its index
-
-The component:
-- Maps over the array returned by the \`each\` function
-- Calls the \`children\` function for each item, passing the item and index
-- Returns the results wrapped in a fragment
-- Provides a cleaner alternative to using \`.map()\` directly in JSX
+O componente \`Loop\` torna a iteração declarativa e, quando recebido um signal getter, reativo.
+Use \`each\` com array ou getter e \`children\` para renderizar cada item.
+Defina \`keyExtractor\` para listas dinâmicas.
         `,
       },
     },

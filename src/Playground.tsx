@@ -49,11 +49,16 @@ function Playground() {
         </Rf.Fulfilled>
         <Rf.Pending>Carregando</Rf.Pending>
         <Rf.Rejected>
-          {(error) => (
-            <div>
-              <h2>Erro ao carregar o post:</h2>
-              <p>{error.message}</p>
-            </div>
+          {(error: Error | unknown) => ( // AQUI ESTÁ A CORREÇÃO: aceita Error | unknown
+            <p style={{ color: 'red' }}>
+              Erro:{" "}
+              {error instanceof Error // Verifica se é uma instância de Error
+                ? error.message
+                : typeof error === 'object' && error !== null && 'message' in error && typeof (error as any).message === 'string'
+                  ? (error as any).message // Se for um objeto com propriedade `message`
+                  : String(error) // Fallback para outros tipos (string, number, etc.)
+              }
+            </p>
           )}
         </Rf.Rejected>
         <Rf.EndAsync />
@@ -66,7 +71,7 @@ function Playground() {
       <Rf.OnMount do={() => console.log('Mounted!')} />
 
       <Rf.Signal value={name}>
-        {(value) => (
+        {(_) => (
           <div>
             <input
               type="text"
