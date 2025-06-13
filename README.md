@@ -220,6 +220,16 @@ Reflex includes many other useful components:
 - **Action**: Declarative side effects
 - **BindInput/BindText**: Two-way binding for form elements
 
+## Viewing Components in Storybook
+
+To see all the components in action and explore their capabilities, run the following command:
+
+```bash
+npm run storybook
+```
+
+This will start the Storybook development server, allowing you to browse and interact with all the components in an isolated environment.
+
 ## Philosophy
 
 The main philosophy of Reflex is to avoid mixing imperative code with declarative code, even when using JSX elements with arrow functions. This separation makes your code more maintainable, easier to reason about, and less prone to bugs.
@@ -264,9 +274,17 @@ To improve interoperability with the React ecosystem, we're developing adapters 
 
 We welcome contributions to Reflex! If you're interested in helping improve the library, please feel free to submit pull requests or open issues on our GitHub repository.
 
+## ✍️ Author
+
+This project was created by [Renato Lovizotto](https://github.com/renatolovizotto).  
+Please give proper credit if you fork, extend, or reference this work.
+
 ## License
 
 MIT
+
+🙏 Reflex is licensed under MIT to support openness and learning.
+> Please respect the spirit of the project: don't rebrand or commercialize it without attribution or meaningful changes.
 
 ## ☕ Support Reflex
 
