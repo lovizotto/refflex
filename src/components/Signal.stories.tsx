@@ -15,9 +15,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // Example component that uses Signal
+
 const SignalExample = () => {
   const [count, setCount] = createSignal(0);
-  
   return (
     <div>
       <button onClick={() => setCount(count() + 1)}>Increment</button>
@@ -29,11 +29,14 @@ const SignalExample = () => {
 };
 
 export const Default: Story = {
+  args: {},
   render: () => <SignalExample />,
 };
 
 export const WithDescription: Story = {
   render: () => <SignalExample />,
+  tags: ['docs'],
+  args: {},
   parameters: {
     docs: {
       description: {

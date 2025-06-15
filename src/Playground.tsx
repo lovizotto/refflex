@@ -1,4 +1,4 @@
-import { Rf } from './Rf.tsx';
+import { Rf } from './core/Rf.tsx';
 
 
 function Playground() {

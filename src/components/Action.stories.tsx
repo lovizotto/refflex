@@ -1,3 +1,14 @@
+/**
+ * Storybook stories for the Action component.
+ * 
+ * This file demonstrates various use cases of the Action component:
+ * - Basic usage with a single watched value
+ * - Watching multiple values simultaneously
+ * - Using the immediate flag to trigger on mount
+ * 
+ * Each example shows how to integrate Action with other components like Signal.
+ */
+
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Action } from './Action';
 import { createSignal } from '../core/createSignal';
@@ -15,7 +26,15 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Example component that uses Action with createSignal
+/**
+ * Basic example of the Action component
+ * 
+ * This example demonstrates:
+ * - Creating signals for state management (count and lastAction)
+ * - Using the Action component to watch a single value (count)
+ * - Updating another signal (lastAction) when the watched value changes
+ * - Using the Signal component to display reactive values
+ */
 const ActionExample = () => {
   const [count, setCount] = createSignal(0);
   const [lastAction, setLastAction] = createSignal('None');
@@ -40,7 +59,15 @@ const ActionExample = () => {
   );
 };
 
-// Example component that uses Action with multiple watches
+/**
+ * Example of the Action component with multiple watched values
+ * 
+ * This example demonstrates:
+ * - Watching multiple signals simultaneously (count and name)
+ * - Receiving an array of values in the onTrigger callback
+ * - Maintaining a log of changes using a signal array
+ * - Using the Signal component to create reactive UI elements
+ */
 const MultiWatchExample = () => {
   const [count, setCount] = createSignal(0);
   const [name, setName] = createSignal('');
@@ -112,7 +139,15 @@ const MultiWatchExample = () => {
   );
 };
 
-// Example component that uses Action with immediate flag
+/**
+ * Example of the Action component with the immediate flag
+ * 
+ * This example demonstrates:
+ * - Using the immediate flag to trigger the callback when the component mounts
+ * - Tracking changes to a count signal
+ * - Maintaining a log of actions including the initial mount trigger
+ * - Showing how the Action component integrates with user interactions
+ */
 const ImmediateActionExample = () => {
   const [count, setCount] = createSignal(0);
   const [logs, setLogs] = createSignal<string[]>(['Component mounted']);
@@ -167,18 +202,34 @@ const ImmediateActionExample = () => {
   );
 };
 
+/**
+ * Default story showcasing the basic usage of the Action component
+ * with a single watched value.
+ */
 export const Default: Story = {
   render: () => <ActionExample />,
 };
 
+/**
+ * Story demonstrating how to watch multiple values simultaneously
+ * and handle an array of values in the onTrigger callback.
+ */
 export const MultipleWatches: Story = {
   render: () => <MultiWatchExample />,
 };
 
+/**
+ * Story showcasing the immediate flag which triggers the callback
+ * as soon as the component mounts, not just when values change.
+ */
 export const ImmediateAction: Story = {
   render: () => <ImmediateActionExample />,
 };
 
+/**
+ * Story with comprehensive documentation about the Action component.
+ * This includes detailed explanations, code examples, and usage guidelines.
+ */
 export const WithDescription: Story = {
   render: () => (
     <div>

@@ -169,7 +169,7 @@ const BasicReadableStreamExample = () => {
   );
 };
 
-// Text file streaming example
+// BindText file streaming example
 const TextFileStreamingExample = () => {
   const [mockStream] = useState(() => new MockReadableStream());
   const [content, setContent] = createSignal<string>('');

@@ -1,4 +1,4 @@
-import { Rf } from './Rf.tsx';
+import { Rf } from './core/Rf.tsx';
 import { createSignal } from './core/createSignal.ts';
 
 const [windowSize, setWindowSize] = createSignal({ width: 0, height: 0 });

@@ -61,7 +61,7 @@ const BasicExample = () => {
 
 // Example with variable height items
 const VariableHeightExample = () => {
-  const items = generateItems(200); // Reduced from 500 to 200
+  const items = generateItems(10000); // Reduced from 500 to 200
 
   return (
     <div className="p-5 border border-gray-300 rounded w-[500px]">
@@ -74,7 +74,7 @@ const VariableHeightExample = () => {
         <VirtualList
           items={items}
           height={400}
-          estimatedItemHeight={70}
+          estimatedItemHeight={100}
           overscan={10}
         >
           {(item, index) => (
@@ -83,7 +83,6 @@ const VariableHeightExample = () => {
               className="p-4 border-b border-gray-200"
               style={{
                 backgroundColor: item.color,
-                height: `${item.height * 50}px`, // Variable height based on the item - keeping this as inline style since it's dynamic
               }}
             >
               <div className="font-bold">{item.title}</div>
