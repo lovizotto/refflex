@@ -1,78 +1,116 @@
-import { useEffect } from 'react';
+// components/PushNotification.tsx
+import { useEffect, useRef } from 'react';
 
 interface PushNotificationProps {
+  // If true, the component will actively ask for permission if it's 'default'.
   askPermission?: boolean;
+  // Callback for when permission is granted.
   onGranted?: () => void;
+  // Callback for when permission is denied.
   onDenied?: () => void;
+  // Callback for when a push message is received from the service worker.
   onMessage?: (data: any) => void;
 }
 
 export function PushNotification({
-  askPermission = true,
-  onGranted,
-  onDenied,
-  onMessage,
-}: PushNotificationProps) {
+                                   askPermission = true,
+                                   onGranted,
+                                   onDenied,
+                                   onMessage,
+                                 }: PushNotificationProps) {
+  // --- Step 1: Use refs to store the latest callbacks ---
+  // This is a critical optimization to prevent infinite loops.
+  // The main effects will not depend on the callback props directly. Instead, they will
+  // read the latest version of the callback from this ref.
+  const onGrantedRef = useRef(onGranted);
+  const onDeniedRef = useRef(onDenied);
+  const onMessageRef = useRef(onMessage);
+
+  // This effect runs on every render to ensure the refs are always up-to-date.
   useEffect(() => {
-    // Check if browser supports Notifications and service workers
+    onGrantedRef.current = onGranted;
+    onDeniedRef.current = onDenied;
+    onMessageRef.current = onMessage;
+  });
+
+  // --- Step 2: Handle Notification Permission ---
+  // This effect is responsible *only* for checking and requesting permission.
+  // It runs only when the `askPermission` prop changes.
+  useEffect(() => {
+    // Check for browser support first.
     if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-      console.warn('Push notifications are not supported in this browser');
+      console.warn('Push notifications are not supported in this browser.');
       return;
     }
 
-    // Request permission if needed
-    if (askPermission && Notification.permission === 'default') {
-      Notification.requestPermission().then((permission) => {
-        if (permission === 'granted') onGranted?.();
-        else onDenied?.();
-      });
-    } else {
-      if (Notification.permission === 'granted') onGranted?.();
-      else if (Notification.permission === 'denied') onDenied?.();
+    const handlePermission = (permission: NotificationPermission) => {
+      if (permission === 'granted') {
+        onGrantedRef.current?.();
+      } else {
+        onDeniedRef.current?.();
+      }
+    };
+
+    // If permission is already granted or denied, immediately call the callback.
+    if (Notification.permission !== 'default') {
+      handlePermission(Notification.permission);
+      return;
     }
 
-    // Handler for push messages from service worker
+    // If permission is 'default' and we are asked to request it, do so.
+    if (askPermission) {
+      Notification.requestPermission().then(handlePermission);
+    }
+  }, [askPermission]); // Only depends on `askPermission`.
+
+  // --- Step 3: Listen for Incoming Messages ---
+  // This effect is responsible *only* for listening to messages.
+  // It sets up listeners and cleans them up properly on unmount.
+  useEffect(() => {
+    // If there's no onMessage handler, there's nothing to do.
+    if (!onMessage) {
+      return;
+    }
+
+    // Handler for messages from the service worker.
     const serviceWorkerHandler = (event: MessageEvent) => {
-      if (event.data?.type === 'push') {
-        onMessage?.(event.data.data);
+      // A common pattern is to wrap pushed data in a recognizable object.
+      if (event.data?.type === 'push-message') {
+        onMessageRef.current?.(event.data.data);
       }
     };
 
-    // Handler for push messages from window (for testing/storybook)
-    const windowHandler = (event: MessageEvent) => {
-      if (event.data?.type === 'push') {
-        onMessage?.(event.data.data);
-      }
-    };
+    // An AbortController is a robust way to cancel async operations during cleanup.
+    const controller = new AbortController();
 
-    // Set up event listeners
-    // Add window event listener for testing/storybook
-    window.addEventListener('message', windowHandler);
+    const setupServiceWorkerListener = async () => {
+      try {
+        // Wait for the service worker to be ready.
+        await navigator.serviceWorker.ready;
 
-    // Variable to track if service worker listener was added
-    let serviceWorkerListenerAdded = false;
+        // If the component unmounted while we were waiting, do nothing.
+        if (controller.signal.aborted) {
+          return;
+        }
 
-    // Set up service worker event listener if ready
-    const serviceWorkerPromise = navigator.serviceWorker.ready
-      .then(() => {
         navigator.serviceWorker.addEventListener('message', serviceWorkerHandler);
-        serviceWorkerListenerAdded = true;
-      })
-      .catch(error => {
+      } catch (error) {
         console.error('Service worker registration failed:', error);
-      });
-
-    // Clean up function
-    return () => {
-      // Always remove window event listener
-      window.removeEventListener('message', windowHandler);
-
-      // Remove service worker event listener if it was added
-      if (serviceWorkerListenerAdded) {
-        navigator.serviceWorker.removeEventListener('message', serviceWorkerHandler);
       }
     };
-  }, [askPermission, onGranted, onDenied, onMessage]);
 
+    setupServiceWorkerListener();
+
+    // The cleanup function is returned from the effect.
+    return () => {
+      // Signal to any ongoing async setup that it should stop.
+      controller.abort();
+      // Always attempt to remove the listener. It's safe to call
+      // removeEventListener even if the listener was never added.
+      navigator.serviceWorker.removeEventListener('message', serviceWorkerHandler);
+    };
+  }, [onMessage]); // Effect depends on `onMessage` to enable/disable listening.
+
+  // This is a side-effect component; it does not render anything.
   return null;
 }

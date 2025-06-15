@@ -1,57 +1,72 @@
+// components/PushNotification.stories.tsx
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useCallback, useState } from 'react';
 import { PushNotification } from './PushNotification';
-import { useEffect } from 'react';
-import { createSignal } from '../core/createSignal';
-import { Signal } from './Signal';
 
-// Mock Notification API for Storybook
-class MockNotification {
-  static permission: NotificationPermission = 'default';
-  static requestPermission: () => Promise<NotificationPermission> =
-    async () => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          MockNotification.permission = 'granted';
-          resolve('granted');
-        }, 1000);
-      });
-    };
-}
+// --- Step 1: Create a more robust, interactive mock ---
+// This mock allows us to store the event listener and trigger it manually.
+const createMockServiceWorker = () => {
+  let messageHandler: ((event: MessageEvent) => void) | null = null;
 
-// Save original Notification
-const OriginalNotification = window.Notification;
-
-// Override Notification for Storybook
-(window as any).Notification = MockNotification;
-
-// Mock service worker for Storybook
-const mockServiceWorker = {
-  addEventListener: (event: string, handler: EventListener) => {
-    console.log(`Added ${event} event listener`);
-  },
-  removeEventListener: (event: string, handler: EventListener) => {
-    console.log(`Removed ${event} event listener`);
-  },
-  ready: Promise.resolve({
-    active: {},
-  }),
-  // Add controller property for the simulate functions to work
-  controller: {
-    postMessage: (message: any) => {
-      console.log('Service worker controller received message:', message);
-    }
-  }
+  return {
+    addEventListener: (event: string, handler: EventListener) => {
+      if (event === 'message') {
+        console.log('Storybook Mock: Service worker "message" listener attached.');
+        messageHandler = handler as (event: MessageEvent) => void;
+      }
+    },
+    removeEventListener: (event: string, handler: EventListener) => {
+      if (event === 'message' && messageHandler === handler) {
+        console.log('Storybook Mock: Service worker "message" listener removed.');
+        messageHandler = null;
+      }
+    },
+    // The `ready` promise is part of the real API.
+    ready: Promise.resolve(),
+    // This is a custom method for our mock to simulate a push event.
+    simulatePushMessage: (data: any) => {
+      if (messageHandler) {
+        console.log('Storybook Mock: Simulating push message:', data);
+        // The component expects the data wrapped in a specific format.
+        const mockEvent = new MessageEvent('message', {
+          data: {
+            type: 'push-message', // Match the type expected by the component.
+            data: data,
+          },
+        });
+        messageHandler(mockEvent);
+      } else {
+        console.warn('Storybook Mock: simulatePushMessage called, but no listener is attached.');
+      }
+    },
+  };
 };
 
-// Save original serviceWorker
-const originalServiceWorker = navigator.serviceWorker;
+// --- Step 2: Set up mocks for browser APIs before stories run ---
+// It's better to do this once at the module level.
+(window as any).Notification = class MockNotification {
+  static permission: NotificationPermission = 'default';
+  static requestPermission = async (): Promise<NotificationPermission> => {
+    // Simulate a user taking a moment to decide.
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // Simulate the user clicking "Allow".
+        const newPermission = 'granted';
+        MockNotification.permission = newPermission;
+        resolve(newPermission);
+      }, 800);
+    });
+  };
+};
 
-// Override serviceWorker for Storybook
+const mockServiceWorker = createMockServiceWorker();
 Object.defineProperty(navigator, 'serviceWorker', {
   value: mockServiceWorker,
   configurable: true,
 });
 
+
+// --- Storybook Metadata ---
 const meta = {
   title: 'Components/PushNotification',
   component: PushNotification,
@@ -64,423 +79,116 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Basic PushNotification example
-const [status, setStatus] = createSignal<string>('Waiting for permission...');
-const [messages, setMessages] = createSignal<string[]>([]);
 
+// --- Basic Example Story ---
 const BasicPushNotificationExample = () => {
+  // Step 3: Manage state inside the component with `useState`.
+  const [status, setStatus] = useState<string>('Waiting for permission...');
+  const [messages, setMessages] = useState<string[]>([]);
 
-  const addMessage = (message: string) => {
+  // Use useCallback to memoize the function, though not strictly
+  // necessary with our corrected PushNotification component. It's good practice.
+  const addEventMessage = useCallback((message: string) => {
     setMessages((prev) => [...prev, message]);
-  };
+  }, []);
 
-  const simulatePushMessage = () => {
-    // Create a mock message event that matches what the component expects
-    const mockData = {
-      type: 'push',
-      data: { message: 'You have a new message!' }
-    };
-
-    // Simulate a message from the service worker
-    setTimeout(() => {
-      // Always dispatch the event, regardless of service worker controller
-      // This simulates the service worker sending a message to the client
-      window.dispatchEvent(
-        new MessageEvent('message', {
-          data: mockData
-          // Removed source property as it's causing issues with the mock implementation
-        })
-      );
-
-      // Also add a message to our UI log
-      addMessage('Received push notification: "You have a new message!"');
-    }, 500);
+  const handleSimulateClick = () => {
+    // This now calls our interactive mock.
+    mockServiceWorker.simulatePushMessage({
+      notification: {
+        title: 'Hello from Storybook!',
+        body: 'This is a simulated push message.',
+      }
+    });
   };
 
   return (
-    <div
-      style={{
-        padding: '20px',
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        width: '400px',
-      }}
-    >
+    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px', width: '400px' }}>
       <h3>Basic Push Notification Example</h3>
 
       <PushNotification
         askPermission={true}
         onGranted={() => {
           setStatus('Permission granted');
-          addMessage('Notification permission granted');
+          addEventMessage('Event: Permission Granted');
         }}
         onDenied={() => {
           setStatus('Permission denied');
-          addMessage('Notification permission denied');
+          addEventMessage('Event: Permission Denied');
         }}
-        onMessage={(event) => {
-          addMessage(`Received push notification: ${JSON.stringify(event)}`);
+        onMessage={(data) => {
+          // The component's onMessage now correctly updates the UI.
+          addEventMessage(`Event: Push Received - ${JSON.stringify(data)}`);
         }}
       />
 
-      <div style={{ marginTop: '10px', marginBottom: '10px' }}>
-        <Signal value={status}>
-          {(currentStatus) => (
-            <div
-              style={{
-                display: 'inline-block',
-                padding: '5px 10px',
-                backgroundColor:
-                  currentStatus === 'Permission granted'
-                    ? '#4CAF50'
-                    : currentStatus === 'Permission denied'
-                      ? '#F44336'
-                      : '#FFC107',
-                color: 'white',
-                borderRadius: '4px',
-              }}
-            >
-              {currentStatus}
-            </div>
-          )}
-        </Signal>
+      <div style={{ margin: '15px 0' }}>
+        Status:
+        <div style={{ display: 'inline-block', padding: '5px 10px', marginLeft: '10px', backgroundColor: status === 'Permission granted' ? '#4CAF50' : status === 'Permission denied' ? '#F44336' : '#FFC107', color: 'white', borderRadius: '4px' }}>
+          {status}
+        </div>
       </div>
 
-      <div style={{ marginTop: '10px', marginBottom: '10px' }}>
-        <button
-          onClick={simulatePushMessage}
-          style={{ padding: '8px 12px' }}
-        >
-          Simulate Push Notification
-        </button>
-      </div>
+      <button onClick={handleSimulateClick} style={{ padding: '8px 12px', marginBottom: '15px' }}>
+        Simulate Push Message
+      </button>
 
-      <div style={{ marginTop: '10px' }}>
-        <h4>Events:</h4>
-        <Signal value={messages}>
-          {(messageList) => (
-            <ul
-              style={{
-                maxHeight: '200px',
-                overflow: 'auto',
-                padding: '10px',
-                backgroundColor: '#f5f5f5',
-                borderRadius: '4px',
-                margin: 0,
-                listStyleType: 'none',
-              }}
-            >
-              {!messageList || !Array.isArray(messageList) ? (
-                <li style={{ padding: '5px' }}>No messages</li>
-              ) : (
-                messageList.map((msg, index) => (
-                  <li
-                    key={index}
-                    style={{
-                      padding: '5px',
-                      borderBottom:
-                        index < messageList.length - 1
-                          ? '1px solid #ddd'
-                          : 'none',
-                    }}
-                  >
-                    {msg}
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
-        </Signal>
+      <div>
+        <h4>Events Log:</h4>
+        <div style={{ maxHeight: '200px', overflowY: 'auto', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px', listStyleType: 'none', margin: 0 }}>
+          {messages.length === 0
+            ? <div style={{color: '#666'}}>No events yet.</div>
+            : messages.map((msg, index) => (
+              <div key={index} style={{ padding: '5px', borderBottom: index < messages.length - 1 ? '1px solid #ddd' : 'none' }}>
+                {msg}
+              </div>
+            ))
+          }
+        </div>
       </div>
     </div>
   );
 };
 
-// Notification Center example
-const [permissionStatus, setPermissionStatus] =
-  createSignal<NotificationPermission>('default');
-const [notifications, setNotifications] = createSignal<
-  { id: number; title: string; body: string; read: boolean }[]
->([
-  {
-    id: 1,
-    title: 'Welcome',
-    body: 'Welcome to the notification center!',
-    read: false,
-  },
-  {
-    id: 2,
-    title: 'New Feature',
-    body: 'Check out our new features',
-    read: true,
-  },
-]);
-const NotificationCenterExample = () => {
 
-
-  const addNotification = (title: string, body: string) => {
-    // Ensure notifications() returns an array
-    const notificationsList = notifications();
-    if (!notificationsList || !Array.isArray(notificationsList)) {
-      // If notifications() is not an array, initialize with an empty array
-      setNotifications([{ id: 1, title, body, read: false }]);
-      return;
-    }
-
-    const newId =
-      notificationsList.length > 0
-        ? Math.max(...notificationsList.map((n) => n.id)) + 1
-        : 1;
-    setNotifications((prev) => [
-      ...prev,
-      { id: newId, title, body, read: false },
-    ]);
-  };
-
-  const markAsRead = (id: number) => {
-    setNotifications((prev) => {
-      // Ensure prev is an array before calling map
-      if (!prev || !Array.isArray(prev)) {
-        return [];
-      }
-      return prev.map((n) => (n.id === id ? { ...n, read: true } : n));
-    });
-  };
-
-  const simulateNewNotification = () => {
-    // Create a mock message event that matches what the component expects
-    const mockData = {
-      type: 'push',
-      data: { 
-        title: 'New Message',
-        body: 'You have received a new message from the system.'
-      }
-    };
-
-    // Always dispatch the event, regardless of service worker controller
-    // This simulates the service worker sending a message to the client
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        data: mockData
-        // Removed source property as it's causing issues with the mock implementation
-      })
-    );
-
-    // Also add to our UI notification center
-    addNotification(
-      'New Message',
-      'You have received a new message from the system.',
-    );
-  };
-
-  return (
-    <div
-      style={{
-        padding: '20px',
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        width: '500px',
-      }}
-    >
-      <h3>Notification Center Example</h3>
-
-      <PushNotification
-        askPermission={true}
-        onGranted={() => {
-          setPermissionStatus('granted');
-        }}
-        onDenied={() => {
-          setPermissionStatus('denied');
-        }}
-        onMessage={(event) => {
-          // In a real app, this would parse the push event data
-          addNotification('New Push', 'You received a push notification');
-        }}
-      />
-
-      <div
-        style={{
-          marginTop: '10px',
-          marginBottom: '20px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <Signal value={permissionStatus}>
-          {(status) => (
-            <div
-              style={{
-                display: 'inline-block',
-                padding: '5px 10px',
-                backgroundColor:
-                  status === 'granted'
-                    ? '#4CAF50'
-                    : status === 'denied'
-                      ? '#F44336'
-                      : '#FFC107',
-                color: 'white',
-                borderRadius: '4px',
-              }}
-            >
-              Notification Status: {status}
-            </div>
-          )}
-        </Signal>
-
-        <button
-          onClick={simulateNewNotification}
-          style={{ padding: '8px 12px' }}
-        >
-          Simulate New Notification
-        </button>
-      </div>
-
-      <div style={{ marginTop: '10px' }}>
-        <h4>Notification Center:</h4>
-        <Signal value={notifications}>
-          {(notificationList) => (
-            <div
-              style={{
-                maxHeight: '300px',
-                overflow: 'auto',
-                padding: '10px',
-                backgroundColor: '#f5f5f5',
-                borderRadius: '4px',
-              }}
-            >
-              {!notificationList || notificationList.length === 0 ? (
-                <div
-                  style={{
-                    padding: '10px',
-                    textAlign: 'center',
-                    color: '#666',
-                  }}
-                >
-                  No notifications
-                </div>
-              ) : (
-                Array.isArray(notificationList) ? notificationList.map((notification) => (
-                  <div
-                    key={notification.id}
-                    style={{
-                      padding: '10px',
-                      margin: '5px 0',
-                      backgroundColor: notification.read ? '#fff' : '#e3f2fd',
-                      borderRadius: '4px',
-                      borderLeft: notification.read
-                        ? '3px solid #ccc'
-                        : '3px solid #2196F3',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => markAsRead(notification.id)}
-                  >
-                    <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>
-                      {notification.title}
-                      {!notification.read && (
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            backgroundColor: '#2196F3',
-                            marginLeft: '5px',
-                          }}
-                        ></span>
-                      )}
-                    </div>
-                    <div style={{ color: '#666' }}>{notification.body}</div>
-                  </div>
-                ))
-              : null
-              )}
-            </div>
-          )}
-        </Signal>
-      </div>
-    </div>
-  );
-};
-
+// --- Step 4: Combine documentation with the primary story ---
 export const Basic: Story = {
   render: () => <BasicPushNotificationExample />,
-};
-
-export const NotificationCenter: Story = {
-  render: () => <NotificationCenterExample />,
-};
-
-export const WithDescription: Story = {
-  render: () => (
-    <div>
-      <BasicPushNotificationExample />
-    </div>
-  ),
   parameters: {
     docs: {
       description: {
         story: `
-The PushNotification component provides a simple way to integrate browser push notifications in your React application.
+The \`PushNotification\` component is a side-effect component that handles browser push notification logic in React. It does not render any UI itself.
+
+### Features
+- **Permission Handling**: Automatically requests user permission if not already set.
+- **Lifecycle Callbacks**: Provides \`onGranted\`, \`onDenied\`, and \`onMessage\` callbacks to react to events.
+- **Service Worker Integration**: Listens for messages from the active service worker.
+- **Resource Cleanup**: Automatically cleans up event listeners when the component unmounts.
+
+### How It Works
+The component checks for browser support and the current notification permission state. Based on the \`askPermission\` prop, it may trigger a permission request. It then attaches a listener to \`navigator.serviceWorker\` to handle incoming messages.
 
 \`\`\`tsx
-import { PushNotification } from './components/PushNotification';
-
-// Basic usage example
-const NotificationExample = () => {
-  return (
-    <PushNotification
-      askPermission={true}
-      onGranted={() => {
-        console.log('Notification permission granted');
-      }}
-      onDenied={() => {
-        console.log('Notification permission denied');
-      }}
-      onMessage={(event) => {
-        console.log('Received push notification:', event);
-      }}
-    />
-  );
-};
+// Example Usage
+<PushNotification
+  askPermission={true}
+  onGranted={() => console.log('Permission granted!')}
+  onDenied={() => console.log('Permission denied.')}
+  onMessage={(data) => {
+    console.log('Push message received:', data);
+    // You would typically use this data to show a notification
+    // or update the application state.
+  }}
+/>
 \`\`\`
 
-The PushNotification component handles:
-
-1. Requesting notification permissions from the user
-2. Providing callbacks for permission status changes
-3. Setting up event listeners for incoming push notifications
-4. Cleaning up event listeners when the component unmounts
-
-Props:
-- \`askPermission\`: Boolean to control whether to automatically request notification permission (default: true)
-- \`onGranted\`: Callback function that is called when notification permission is granted
-- \`onDenied\`: Callback function that is called when notification permission is denied
-- \`onMessage\`: Callback function that is called when a push notification is received
-
-The component checks if the browser supports notifications and service workers before attempting to use them. It also handles the different states of notification permissions (default, granted, denied).
-
-Note: For push notifications to work in production, you need to:
-1. Register a service worker
-2. Set up a push notification server
-3. Subscribe the user to push notifications using the PushManager API
+**Note:** For push notifications to work in a real application, you must have a registered service worker capable of receiving push events from a push service. These stories use a mock to simulate this behavior.
         `,
       },
     },
   },
 };
 
-// Restore the original Notification and serviceWorker after the story is unmounted
-export const Cleanup = () => {
-  useEffect(() => {
-    return () => {
-      window.Notification = OriginalNotification;
-      Object.defineProperty(navigator, 'serviceWorker', {
-        value: originalServiceWorker,
-        configurable: true,
-      });
-    };
-  }, []);
-
-  return null;
-};
+// Step 5: Remove redundant/anti-pattern stories like `WithDescription` and `Cleanup`.
+// The cleanup is now handled by React's unmounting cycle and the mocks are set at the module level.
