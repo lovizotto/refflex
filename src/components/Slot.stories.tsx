@@ -152,33 +152,33 @@ const DynamicExample = () => {
     <div>
       <h3>Dynamic Slot Example</h3>
       <p>This example shows how to use slots with dynamic content and state:</p>
-      
+
       <ProvideSlots
         slots={{
           header: (
             <div style={headerStyles}>
               <h2>My Website</h2>
               <nav style={navStyles}>
-                <span 
+                <span
                   style={navItemStyles(content === 'home')}
                   onClick={() => setContent('home')}
                 >
                   Home
                 </span>
-                <span 
+                <span
                   style={navItemStyles(content === 'about')}
                   onClick={() => setContent('about')}
                 >
                   About
                 </span>
-                <span 
+                <span
                   style={navItemStyles(content === 'contact')}
                   onClick={() => setContent('contact')}
                 >
                   Contact
                 </span>
               </nav>
-              <button 
+              <button
                 style={themeButtonStyles}
                 onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
               >
@@ -187,11 +187,11 @@ const DynamicExample = () => {
             </div>
           ),
           content: getContent(),
-          footer: <p>© 2023 Dynamic Slot Example | Current theme: {theme}</p>
+          footer: <p>© 2023 Dynamic Slot Example | Current theme: {theme}</p>,
         }}
       >
         <div style={layoutStyles}>
-          <PageLayout />
+          <PageLayout children={undefined} />
         </div>
       </ProvideSlots>
     </div>

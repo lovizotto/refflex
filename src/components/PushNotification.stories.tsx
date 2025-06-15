@@ -35,6 +35,12 @@ const mockServiceWorker = {
   ready: Promise.resolve({
     active: {},
   }),
+  // Add controller property for the simulate functions to work
+  controller: {
+    postMessage: (message: any) => {
+      console.log('Service worker controller received message:', message);
+    }
+  }
 };
 
 // Save original serviceWorker
@@ -77,16 +83,14 @@ const BasicPushNotificationExample = () => {
 
     // Simulate a message from the service worker
     setTimeout(() => {
-      // Dispatch a message event that the component will recognize
-      if (navigator.serviceWorker.controller) {
-        // This simulates the service worker sending a message to the client
-        window.dispatchEvent(
-          new MessageEvent('message', {
-            data: mockData,
-            source: navigator.serviceWorker.controller
-          })
-        );
-      }
+      // Always dispatch the event, regardless of service worker controller
+      // This simulates the service worker sending a message to the client
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: mockData
+          // Removed source property as it's causing issues with the mock implementation
+        })
+      );
 
       // Also add a message to our UI log
       addMessage('Received push notification: "You have a new message!"');
@@ -146,7 +150,6 @@ const BasicPushNotificationExample = () => {
         <button
           onClick={simulatePushMessage}
           style={{ padding: '8px 12px' }}
-          disabled={status() !== 'Permission granted'}
         >
           Simulate Push Notification
         </button>
@@ -167,20 +170,24 @@ const BasicPushNotificationExample = () => {
                 listStyleType: 'none',
               }}
             >
-              {messageList.map((msg, index) => (
-                <li
-                  key={index}
-                  style={{
-                    padding: '5px',
-                    borderBottom:
-                      index < messageList.length - 1
-                        ? '1px solid #ddd'
-                        : 'none',
-                  }}
-                >
-                  {msg}
-                </li>
-              ))}
+              {!messageList || !Array.isArray(messageList) ? (
+                <li style={{ padding: '5px' }}>No messages</li>
+              ) : (
+                messageList.map((msg, index) => (
+                  <li
+                    key={index}
+                    style={{
+                      padding: '5px',
+                      borderBottom:
+                        index < messageList.length - 1
+                          ? '1px solid #ddd'
+                          : 'none',
+                    }}
+                  >
+                    {msg}
+                  </li>
+                ))
+              )}
             </ul>
           )}
         </Signal>
@@ -212,9 +219,17 @@ const NotificationCenterExample = () => {
 
 
   const addNotification = (title: string, body: string) => {
+    // Ensure notifications() returns an array
+    const notificationsList = notifications();
+    if (!notificationsList || !Array.isArray(notificationsList)) {
+      // If notifications() is not an array, initialize with an empty array
+      setNotifications([{ id: 1, title, body, read: false }]);
+      return;
+    }
+
     const newId =
-      notifications().length > 0
-        ? Math.max(...notifications().map((n) => n.id)) + 1
+      notificationsList.length > 0
+        ? Math.max(...notificationsList.map((n) => n.id)) + 1
         : 1;
     setNotifications((prev) => [
       ...prev,
@@ -223,9 +238,13 @@ const NotificationCenterExample = () => {
   };
 
   const markAsRead = (id: number) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    );
+    setNotifications((prev) => {
+      // Ensure prev is an array before calling map
+      if (!prev || !Array.isArray(prev)) {
+        return [];
+      }
+      return prev.map((n) => (n.id === id ? { ...n, read: true } : n));
+    });
   };
 
   const simulateNewNotification = () => {
@@ -238,16 +257,14 @@ const NotificationCenterExample = () => {
       }
     };
 
-    // Simulate a message from the service worker
-    if (navigator.serviceWorker.controller) {
-      // This simulates the service worker sending a message to the client
-      window.dispatchEvent(
-        new MessageEvent('message', {
-          data: mockData,
-          source: navigator.serviceWorker.controller
-        })
-      );
-    }
+    // Always dispatch the event, regardless of service worker controller
+    // This simulates the service worker sending a message to the client
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: mockData
+        // Removed source property as it's causing issues with the mock implementation
+      })
+    );
 
     // Also add to our UI notification center
     addNotification(
@@ -332,7 +349,7 @@ const NotificationCenterExample = () => {
                 borderRadius: '4px',
               }}
             >
-              {notificationList.length === 0 ? (
+              {!notificationList || notificationList.length === 0 ? (
                 <div
                   style={{
                     padding: '10px',
@@ -343,7 +360,7 @@ const NotificationCenterExample = () => {
                   No notifications
                 </div>
               ) : (
-                notificationList.map((notification) => (
+                Array.isArray(notificationList) ? notificationList.map((notification) => (
                   <div
                     key={notification.id}
                     style={{
@@ -376,6 +393,7 @@ const NotificationCenterExample = () => {
                     <div style={{ color: '#666' }}>{notification.body}</div>
                   </div>
                 ))
+              : null
               )}
             </div>
           )}

@@ -42,7 +42,7 @@ export function ReadableStream({ src, onChunk, onDone, onError, children }: Read
       cancelled = true;
       reader.cancel().catch(() => {});
     };
-  }, [src]);
+  }, [src, onChunk, onDone, onError]);
 
   return <>{children}</>;
 }

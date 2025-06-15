@@ -23,6 +23,11 @@ import { Portal } from './components/Portal.tsx';
 import { OnResize } from './components/OnResize.tsx';
 import { VirtualList } from './components/VirtualList.tsx';
 import { Action } from './components/Action.tsx';
+import { PushNotification } from './components/PushNotification.tsx';
+import { WebSocketProvider, OnMessage, OnOpen, OnClose } from './components/WebSocket.tsx';
+import { ReadableStream } from './components/ReadableStream.tsx';
+import { ServiceWorker } from './components/ServiceWorker.tsx';
+import { Resource, ResourcePending, ResourceFulfilled, ResourceRejected } from './components/Resource.tsx';
 
 export const Rf = {
   createSignal,
@@ -57,5 +62,18 @@ export const Rf = {
   Portal,
   OnResize,
   VirtualList,
-  Action
+  Action,
+  PushNotification,
+  WebSocket: {
+    Provider: WebSocketProvider,
+    OnMessage,
+    OnOpen,
+    OnClose
+  },
+  ReadableStream,
+  ServiceWorker,
+  Resource,
+  ResourcePending,
+  ResourceFulfilled,
+  ResourceRejected
 };

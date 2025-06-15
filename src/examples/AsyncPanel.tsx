@@ -1,6 +1,6 @@
 import { Rf } from './core/Rf.tsx';
 
-import { createSignal } from './core/createSignal.ts';
+import { createSignal } from '../core/createSignal.ts';
 
 const fetchTodos = async (url: string) => {
   return await fetch(url)

@@ -46,31 +46,31 @@ export function PushNotification({
     };
 
     // Set up event listeners
-    let cleanup: (() => void) | undefined;
-
     // Add window event listener for testing/storybook
     window.addEventListener('message', windowHandler);
 
+    // Variable to track if service worker listener was added
+    let serviceWorkerListenerAdded = false;
+
     // Set up service worker event listener if ready
-    navigator.serviceWorker.ready
+    const serviceWorkerPromise = navigator.serviceWorker.ready
       .then(() => {
         navigator.serviceWorker.addEventListener('message', serviceWorkerHandler);
-        cleanup = () => {
-          navigator.serviceWorker.removeEventListener('message', serviceWorkerHandler);
-          window.removeEventListener('message', windowHandler);
-        };
+        serviceWorkerListenerAdded = true;
       })
       .catch(error => {
         console.error('Service worker registration failed:', error);
-        // Still need to clean up window event listener
-        cleanup = () => {
-          window.removeEventListener('message', windowHandler);
-        };
       });
 
     // Clean up function
     return () => {
-      if (cleanup) cleanup();
+      // Always remove window event listener
+      window.removeEventListener('message', windowHandler);
+
+      // Remove service worker event listener if it was added
+      if (serviceWorkerListenerAdded) {
+        navigator.serviceWorker.removeEventListener('message', serviceWorkerHandler);
+      }
     };
   }, [askPermission, onGranted, onDenied, onMessage]);
 

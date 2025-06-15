@@ -27,9 +27,9 @@ export interface WebSocketProviderProps {
  * — Exibe erro se usado sem um <WebSocketProvider>.
  */
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
-                                                                      url,
-                                                                      children,
-                                                                    }) => {
+  url,
+  children,
+}) => {
   const [socket, setSocket] = useState<WebSocket | null>(null);
 
   useEffect(() => {
@@ -60,9 +60,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
 export function useWebSocket(): WebSocket | null {
   const ctx = useContext(WebSocketContext);
   if (!ctx) {
-    throw new Error(
-      'useWebSocket must be used within a <WebSocketProvider>',
-    );
+    throw new Error('useWebSocket must be used within a <WebSocketProvider>');
   }
   return ctx.socket;
 }
@@ -82,8 +80,8 @@ interface HandlerProps<EventType> {
  * — Adiciona um listener em "message" e limpa ao desmontar.
  */
 export const OnMessage: React.FC<HandlerProps<MessageEvent>> = ({
-                                                                  children: onMessage,
-                                                                }) => {
+  children: onMessage,
+}) => {
   const socket = useWebSocket();
   // Memoiza a função de callback para evitar recriações desnecessárias.
   const handler = useCallback((ev: MessageEvent) => onMessage(ev), [onMessage]);
@@ -106,9 +104,7 @@ export const OnMessage: React.FC<HandlerProps<MessageEvent>> = ({
  * OnOpen
  * — Adiciona um listener em "open" e limpa ao desmontar.
  */
-export const OnOpen: React.FC<HandlerProps<Event>> = ({
-                                                        children: onOpen,
-                                                      }) => {
+export const OnOpen: React.FC<HandlerProps<Event>> = ({ children: onOpen }) => {
   const socket = useWebSocket();
   // CORREÇÃO: O evento `ev` deve ser repassado para a função de callback `onOpen`.
   const handler = useCallback((ev: Event) => onOpen(ev), [onOpen]);
@@ -131,8 +127,8 @@ export const OnOpen: React.FC<HandlerProps<Event>> = ({
  * — Adiciona um listener em "close" e limpa ao desmontar.
  */
 export const OnClose: React.FC<HandlerProps<CloseEvent>> = ({
-                                                              children: onClose,
-                                                            }) => {
+  children: onClose,
+}) => {
   const socket = useWebSocket();
   // CORREÇÃO: O evento `ev` deve ser repassado para a função de callback `onClose`.
   const handler = useCallback((ev: CloseEvent) => onClose(ev), [onClose]);
