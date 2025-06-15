@@ -1,8 +1,9 @@
+// components/Rf/ReadableStream.stories.tsx
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import React, { useState, useEffect } from 'react';
 import { ReadableStream } from './ReadableStream';
-import { useState, useEffect } from 'react';
-import { createSignal } from '../core/createSignal';
 
+// A meta-informação do componente permanece a mesma.
 const meta = {
   title: 'Components/ReadableStream',
   component: ReadableStream,
@@ -15,10 +16,11 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Mock ReadableStream for Storybook
+// A classe MockReadableStream está ótima e não precisa de alterações.
+// É uma excelente forma de simular uma stream de forma controlada.
 class MockReadableStream {
   private controller: ReadableStreamController<Uint8Array> | null = null;
-  private stream: globalThis.ReadableStream<Uint8Array>;
+  public stream: globalThis.ReadableStream<Uint8Array>;
 
   constructor() {
     this.stream = new globalThis.ReadableStream({
@@ -28,40 +30,40 @@ class MockReadableStream {
     });
   }
 
-  // Method to push data to the stream
   pushData(data: string) {
     if (this.controller) {
       const encoder = new TextEncoder();
-      const uint8Array = encoder.encode(data);
-      this.controller.enqueue(uint8Array);
+      this.controller.enqueue(encoder.encode(data));
     }
   }
 
-  // Method to close the stream
   close() {
     if (this.controller) {
       this.controller.close();
+      this.controller = null; // Libera a referência após fechar
     }
   }
 
-  // Method to signal an error
   error(err: any) {
     if (this.controller) {
       this.controller.error(err);
+      this.controller = null; // Libera a referência após o erro
     }
   }
 
-  // Get the actual ReadableStream
   getStream() {
     return this.stream;
   }
 }
 
-// Basic ReadableStream example
+// --- Componente de Exemplo Básico Corrigido ---
 const BasicReadableStreamExample = () => {
+  // Correção 1: Usar useState para garantir que a instância do mock seja criada apenas uma vez.
   const [mockStream] = useState(() => new MockReadableStream());
-  const [messages, setMessages] = createSignal<string[]>([]);
-  const [isStreamClosed, setIsStreamClosed] = createSignal(false);
+
+  // Correção 2: Substituir `createSignal` por `React.useState` para gestão de estado padrão do React.
+  const [messages, setMessages] = useState<string[]>([]);
+  const [isStreamClosed, setIsStreamClosed] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
 
   const addMessage = (message: string) => {
@@ -70,32 +72,33 @@ const BasicReadableStreamExample = () => {
 
   return (
     <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px', width: '400px' }}>
-      <h3>Basic ReadableStream Example</h3>
-      
-      <ReadableStream 
+      <h3>Exemplo Básico de ReadableStream</h3>
+
+      <ReadableStream
         src={mockStream.getStream()}
         onChunk={(chunk) => {
-          const decoder = new TextDecoder();
-          const text = decoder.decode(chunk);
-          addMessage(`Received: ${text}`);
+          const text = new TextDecoder().decode(chunk);
+          addMessage(`Recebido: ${text}`);
         }}
         onDone={() => {
-          addMessage('Stream closed');
+          addMessage('Stream fechada');
           setIsStreamClosed(true);
         }}
         onError={(err) => {
-          addMessage(`Error: ${err.message || 'Unknown error'}`);
+          addMessage(`Erro: ${err.message || 'Erro desconhecido'}`);
+          setIsStreamClosed(true); // Também fechar em caso de erro
         }}
       >
         <div style={{ marginTop: '10px', marginBottom: '10px' }}>
-          <div style={{ 
-            display: 'inline-block', 
-            padding: '5px 10px', 
-            backgroundColor: isStreamClosed() ? '#F44336' : '#4CAF50',
+          <div style={{
+            display: 'inline-block',
+            padding: '5px 10px',
+            // Correção 3: Acessar o estado diretamente (isStreamClosed) em vez de como função (isStreamClosed()).
+            backgroundColor: isStreamClosed ? '#F44336' : '#4CAF50',
             color: 'white',
             borderRadius: '4px'
           }}>
-            Stream {isStreamClosed() ? 'Closed' : 'Open'}
+            Stream {isStreamClosed ? 'Fechada' : 'Aberta'}
           </div>
         </div>
 
@@ -104,60 +107,40 @@ const BasicReadableStreamExample = () => {
             type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            placeholder="Type a message to send"
+            placeholder="Digite uma mensagem para enviar"
             style={{ padding: '8px', marginRight: '10px', width: '70%' }}
+            disabled={isStreamClosed}
           />
           <button
             onClick={() => {
               if (inputMessage.trim()) {
                 mockStream.pushData(inputMessage);
-                addMessage(`Sent: ${inputMessage}`);
+                addMessage(`Enviado: ${inputMessage}`);
                 setInputMessage('');
               }
             }}
             style={{ padding: '8px 12px' }}
-            disabled={isStreamClosed()}
+            disabled={isStreamClosed}
           >
-            Send
+            Enviar
           </button>
         </div>
 
         <div>
-          <button
-            onClick={() => mockStream.close()}
-            style={{ padding: '8px 12px', marginRight: '10px' }}
-            disabled={isStreamClosed()}
-          >
-            Close Stream
+          <button onClick={() => mockStream.close()} style={{ padding: '8px 12px', marginRight: '10px' }} disabled={isStreamClosed}>
+            Fechar Stream
           </button>
-          <button
-            onClick={() => mockStream.error(new Error('Simulated error'))}
-            style={{ padding: '8px 12px' }}
-            disabled={isStreamClosed()}
-          >
-            Trigger Error
+          <button onClick={() => mockStream.error(new Error('Erro simulado'))} style={{ padding: '8px 12px' }} disabled={isStreamClosed}>
+            Disparar Erro
           </button>
         </div>
 
         <div style={{ marginTop: '10px' }}>
-          <h4>Messages:</h4>
-          <div style={{ 
-            maxHeight: '200px', 
-            overflow: 'auto', 
-            padding: '10px', 
-            backgroundColor: '#f5f5f5', 
-            borderRadius: '4px'
-          }}>
-            <ul style={{ 
-              margin: 0,
-              padding: 0,
-              listStyleType: 'none'
-            }}>
-              {messages().map((msg, index) => (
-                <li key={index} style={{ 
-                  padding: '5px',
-                  borderBottom: index < messages().length - 1 ? '1px solid #ddd' : 'none'
-                }}>
+          <h4>Mensagens:</h4>
+          <div style={{ maxHeight: '200px', overflowY: 'auto', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+            <ul style={{ margin: 0, padding: 0, listStyleType: 'none' }}>
+              {messages.map((msg, index) => (
+                <li key={index} style={{ padding: '5px', borderBottom: index < messages.length - 1 ? '1px solid #ddd' : 'none' }}>
                   {msg}
                 </li>
               ))}
@@ -169,126 +152,85 @@ const BasicReadableStreamExample = () => {
   );
 };
 
-// BindText file streaming example
+// --- Componente de Exemplo de Streaming de Texto Corrigido ---
 const TextFileStreamingExample = () => {
+  // Correção 1: Usar useState para a instância do mock.
   const [mockStream] = useState(() => new MockReadableStream());
-  const [content, setContent] = createSignal<string>('');
-  const [isStreaming, setIsStreaming] = createSignal(false);
-  const [progress, setProgress] = createSignal(0);
-  const [error, setError] = createSignal<string | null>(null);
 
-  // Simulate streaming a text file
-  const simulateFileStreaming = () => {
-    setIsStreaming(true);
-    setContent('');
-    setError(null);
-    setProgress(0);
-    
-    const text = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam auctor, nisl eget ultricies tincidunt, 
-nisl nisl aliquam nisl, eget aliquam nisl nisl eget nisl. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, 
-eget aliquam nisl nisl eget nisl. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget aliquam nisl nisl eget nisl.
-Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget aliquam nisl nisl eget nisl. Nullam auctor, nisl eget ultricies tincidunt, 
-nisl nisl aliquam nisl, eget aliquam nisl nisl eget nisl. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget aliquam nisl nisl eget nisl.`;
-    
+  // Correção 2: Usar `useState` em vez de `createSignal`.
+  const [content, setContent] = useState<string>('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  // Correção 4: Usar useEffect para gerenciar o ciclo de vida do `setInterval`.
+  useEffect(() => {
+    if (!isStreaming) {
+      return;
+    }
+
+    const text = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget aliquam nisl nisl eget nisl.`;
     const chunks = text.split(' ');
     let index = 0;
-    
-    const interval = setInterval(() => {
+
+    const intervalId = setInterval(() => {
       if (index < chunks.length) {
         mockStream.pushData(chunks[index] + ' ');
         index++;
         setProgress(Math.floor((index / chunks.length) * 100));
       } else {
-        clearInterval(interval);
+        clearInterval(intervalId);
         mockStream.close();
       }
     }, 100);
+
+    // Função de limpeza: será chamada se o componente for desmontado ou se `isStreaming` mudar.
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isStreaming, mockStream]); // Depender de `isStreaming` para iniciar/parar.
+
+  const startStreaming = () => {
+    setContent('');
+    setError(null);
+    setProgress(0);
+    setIsStreaming(true);
   };
 
   return (
     <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px', width: '500px' }}>
-      <h3>Text File Streaming Example</h3>
-      
-      <ReadableStream 
+      <h3>Exemplo de Streaming de Ficheiro de Texto</h3>
+      <ReadableStream
         src={mockStream.getStream()}
         onChunk={(chunk) => {
-          const decoder = new TextDecoder();
-          const text = decoder.decode(chunk);
+          const text = new TextDecoder().decode(chunk);
           setContent(prev => prev + text);
         }}
-        onDone={() => {
-          setIsStreaming(false);
-        }}
+        onDone={() => setIsStreaming(false)}
         onError={(err) => {
-          setError(err.message || 'Unknown error');
+          setError(err.message || 'Erro desconhecido');
           setIsStreaming(false);
         }}
       >
-        <div style={{ marginBottom: '15px' }}>
-          <button
-            onClick={simulateFileStreaming}
-            style={{ padding: '8px 12px', marginRight: '10px' }}
-            disabled={isStreaming()}
-          >
-            Start Streaming
-          </button>
-          <button
-            onClick={() => {
-              mockStream.error(new Error('Failed to read file'));
-            }}
-            style={{ padding: '8px 12px' }}
-            disabled={!isStreaming()}
-          >
-            Simulate Error
-          </button>
-        </div>
+        <button onClick={startStreaming} style={{ padding: '8px 12px' }} disabled={isStreaming}>
+          Iniciar Streaming
+        </button>
 
-        {isStreaming() && (
-          <div style={{ marginBottom: '15px' }}>
-            <div style={{ 
-              width: '100%', 
-              backgroundColor: '#e0e0e0', 
-              borderRadius: '4px', 
-              overflow: 'hidden' 
-            }}>
-              <div style={{ 
-                width: `${progress()}%`, 
-                height: '10px', 
-                backgroundColor: '#4CAF50', 
-                transition: 'width 0.3s ease' 
-              }}></div>
+        {isStreaming && (
+          <div style={{ margin: '15px 0' }}>
+            <div style={{ width: '100%', backgroundColor: '#e0e0e0', borderRadius: '4px' }}>
+              <div style={{ width: `${progress}%`, height: '10px', backgroundColor: '#4CAF50', transition: 'width 0.2s' }} />
             </div>
-            <div style={{ textAlign: 'center', marginTop: '5px' }}>
-              {progress()}% complete
-            </div>
+            <div style={{ textAlign: 'center', marginTop: '5px' }}>{progress}% concluído</div>
           </div>
         )}
 
-        {error() && (
-          <div style={{ 
-            padding: '10px', 
-            backgroundColor: '#ffebee', 
-            color: '#c62828', 
-            borderRadius: '4px', 
-            marginBottom: '15px' 
-          }}>
-            Error: {error()}
-          </div>
-        )}
+        {error && <div style={{ color: '#c62828', backgroundColor: '#ffebee', padding: '10px', borderRadius: '4px', margin: '15px 0' }}>Erro: {error}</div>}
 
         <div style={{ marginTop: '10px' }}>
-          <h4>File Content:</h4>
-          <div style={{ 
-            height: '200px', 
-            overflow: 'auto', 
-            padding: '10px', 
-            backgroundColor: '#f5f5f5', 
-            borderRadius: '4px',
-            fontFamily: 'monospace',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word'
-          }}>
-            {content() || 'No content yet. Click "Start Streaming" to begin.'}
+          <h4>Conteúdo do Ficheiro:</h4>
+          <div style={{ height: '200px', overflowY: 'auto', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+            {content || 'Clique em "Iniciar Streaming" para começar.'}
           </div>
         </div>
       </ReadableStream>
@@ -296,79 +238,62 @@ nisl nisl aliquam nisl, eget aliquam nisl nisl eget nisl. Nullam auctor, nisl eg
   );
 };
 
+
+// --- Histórias Exportadas ---
+
+// Correção 5: Unificar a história "Basic" com a sua documentação.
 export const Basic: Story = {
   render: () => <BasicReadableStreamExample />,
+  parameters: {
+    docs: {
+      description: {
+        story: `
+O componente \`ReadableStream\` oferece uma maneira declarativa e segura de consumir a Web Streams API em React. Ele abstrai a complexidade do ciclo de vida da stream (leitura, conclusão, erro e limpeza).
+
+### Uso Básico
+
+\`\`\`tsx
+import { ReadableStream } from './components/ReadableStream';
+
+const StreamExample = () => {
+  // Obtenha uma ReadableStream de uma API (ex: fetch)
+  const [stream, setStream] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/data-stream').then(response => {
+      setStream(response.body);
+    });
+  }, []);
+  
+  return (
+    <ReadableStream 
+      src={stream}
+      onChunk={(chunk) => console.log('Chunk recebido:', new TextDecoder().decode(chunk))}
+      onDone={() => console.log('Stream concluída!')}
+      onError={(err) => console.error('Erro na stream:', err)}
+    >
+      <div>A sua UI pode ser renderizada aqui.</div>
+    </ReadableStream>
+  );
+};
+\`\`\`
+
+### Funcionalidades
+
+-   **Leitura Automática**: Inicia a leitura assim que a prop \`src\` é fornecida.
+-   **Processamento de Chunks**: Executa a callback \`onChunk\` para cada pedaço de dado recebido.
+-   **Gestão de Fim de Stream**: Executa a callback \`onDone\` quando a stream termina.
+-   **Tratamento de Erros**: Executa a callback \`onError\` em caso de falha.
+-   **Limpeza Automática**: Cancela a stream e libera os recursos quando o componente é desmontado ou a prop \`src\` muda, evitando memory leaks.
+        `,
+      },
+    },
+  },
 };
 
 export const TextFileStreaming: Story = {
   render: () => <TextFileStreamingExample />,
 };
 
-export const WithDescription: Story = {
-  render: () => (
-    <div>
-      <BasicReadableStreamExample />
-    </div>
-  ),
-  parameters: {
-    docs: {
-      description: {
-        story: `
-The ReadableStream component provides a simple way to work with the Web Streams API in React applications.
-
-\`\`\`tsx
-import { ReadableStream } from './components/ReadableStream';
-
-// Basic usage example
-const StreamExample = () => {
-  // Get a ReadableStream from somewhere (fetch, file API, etc.)
-  const stream = getReadableStream();
-  
-  return (
-    <ReadableStream 
-      src={stream}
-      onChunk={(chunk) => {
-        // Process each chunk of data
-        const decoder = new TextDecoder();
-        const text = decoder.decode(chunk);
-        console.log('Received chunk:', text);
-      }}
-      onDone={() => {
-        console.log('Stream completed');
-      }}
-      onError={(err) => {
-        console.error('Stream error:', err);
-      }}
-    >
-      <div>Your UI components here</div>
-    </ReadableStream>
-  );
-};
-\`\`\`
-
-The ReadableStream component handles the lifecycle of a ReadableStream:
-
-1. It automatically reads from the stream when mounted
-2. It processes each chunk of data through the onChunk callback
-3. It handles stream completion with the onDone callback
-4. It handles errors with the onError callback
-5. It cleans up resources when unmounted
-
-This component is useful for:
-- Streaming API responses
-- Processing large files
-- Real-time data processing
-- Server-sent events
-
-The component accepts the following props:
-
-- \`src\`: The ReadableStream to read from
-- \`onChunk\`: Callback function that receives each chunk of data (Uint8Array)
-- \`onDone\`: Callback function called when the stream is complete
-- \`onError\`: Callback function called when an error occurs
-- \`children\`: React components to render
-        `,
-      },
-    },
-  },
-};
+// A história "WithDescription" foi removida porque a sua documentação
+// foi fundida com a história "Basic", seguindo as melhores práticas do Storybook.
