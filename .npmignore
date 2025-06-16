@@ -1,0 +1,6 @@
+stories/
+*.stories.tsx
+*.test.ts
+.vscode/
+tsconfig.json
+vite.config.ts
