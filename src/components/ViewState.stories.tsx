@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import React, { useState } from "react";
+import React, { FormEvent, useState } from "react";
 import { ViewState, State } from "./ViewState";
 import { useSignal, useSelector, useComputed } from "../hooks/useSignal";
 import { S } from "./S";
@@ -164,25 +164,25 @@ const MultiStepFormExample = () => {
           <State name="personal">
             <h4 className="font-bold mb-3">Personal Information</h4>
             <div className="space-y-3">
-              <BindInput
-                signal={useComputed(() => formData.get().firstName)}
-                onChange={(e) =>
-                  formData.set({
-                    ...formData.peek(),
-                    firstName: e.target.value,
-                  })
-                }
-                placeholder="First Name"
-                className="p-2 border rounded w-full"
-              />
-              <BindInput
-                signal={useComputed(() => formData.get().lastName)}
-                onChange={(e) =>
-                  formData.set({ ...formData.peek(), lastName: e.target.value })
-                }
-                placeholder="Last Name"
-                className="p-2 border rounded w-full"
-              />
+              {/*<BindInput*/}
+              {/*  signal={useComputed(() => formData.get().firstName)}*/}
+              {/*  onChange={(e: string) =>*/}
+              {/*    formData.set({*/}
+              {/*      ...formData.peek(),*/}
+              {/*      firstName: e,*/}
+              {/*    })*/}
+              {/*  }*/}
+              {/*  placeholder="First Name"*/}
+              {/*  className="p-2 border rounded w-full"*/}
+              {/*/>*/}
+              {/*<BindInput*/}
+              {/*  signal={useComputed(() => formData.get().lastName)}*/}
+              {/*  onChange={(e) =>*/}
+              {/*    formData.set({ ...formData.peek(), lastName: e.target.value })*/}
+              {/*  }*/}
+              {/*  placeholder="Last Name"*/}
+              {/*  className="p-2 border rounded w-full"*/}
+              {/*/>*/}
             </div>
             <button
               onClick={() => formStep.set("address")}
@@ -195,14 +195,14 @@ const MultiStepFormExample = () => {
           <State name="address">
             <h4 className="font-bold mb-3">Address</h4>
             <div className="space-y-3">
-              <BindInput
-                signal={useComputed(() => formData.get().address)}
-                onChange={(e) =>
-                  formData.set({ ...formData.peek(), address: e.target.value })
-                }
-                placeholder="Street Address"
-                className="p-2 border rounded w-full"
-              />
+              {/*<BindInput*/}
+              {/*  signal={useComputed(() => formData.get().address)}*/}
+              {/*  onChange={(e) =>*/}
+              {/*    formData.set({ ...formData.peek(), address: e.target.value })*/}
+              {/*  }*/}
+              {/*  placeholder="Street Address"*/}
+              {/*  className="p-2 border rounded w-full"*/}
+              {/*/>*/}
             </div>
             <div className="flex gap-2 mt-4">
               <button

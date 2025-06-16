@@ -1,5 +1,4 @@
 import { Timer } from "./components/Timer";
-import { When } from "./components/When";
 
 import { TransitionZone } from "./components/TransitionZone";
 import { OnMount } from "./components/OnMount";
@@ -14,7 +13,7 @@ import { BindInput } from "./components/BindInput";
 import { FadeIn } from "./components/FadeIn";
 import { SlideIn } from "./components/SlideIn";
 import { AnimatePresence } from "./components/AnimatePresence";
-import { Show } from "./components/Show";
+
 import { Loop } from "./components/Loop";
 import { BindText } from "./components/BindText";
 import { Portal } from "./components/Portal";
@@ -57,7 +56,7 @@ export const Rf = {
   },
   S,
   Timer,
-  When,
+
   TransitionZone,
   OnMount,
   OnUpdate,
@@ -75,7 +74,7 @@ export const Rf = {
   FadeIn,
   SlideIn,
   AnimatePresence,
-  Show,
+
   Loop,
   BindText,
   Portal,

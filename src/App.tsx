@@ -1,11 +1,11 @@
-import { createComputed, createSignal } from './core/signals';
-import { useState } from 'react';
-import ExamplesPage from './examples/index';
+import { createComputed, createSignal } from "./core/signals";
+import { useState } from "react";
+import ExamplesPage from "./examples/index";
+import { PerformanceBenchmark } from "./components/Benchmark";
+import { Rf } from "./Rf";
+import { S } from "./components/S";
+import { Loop } from "./components/Loop";
 // Assuming Rf is a library of lifecycle components
-import { Rf } from './Rf.tsx';
-import { PerformanceBenchmark } from './components/Benchmark.tsx';
-import { S } from './components/S.tsx';
-import { Loop } from './components/Loop.tsx'; // Import the new reactive loop component
 
 // --- State Definition (Module Level) ---
 
@@ -22,9 +22,9 @@ const windowHeight = createComputed(() => windowSize.get().height);
 
 // The list of users.
 const users = createSignal([
-  { id: 1, name: 'Alice' },
-  { id: 2, name: 'Bob' },
-  { id: 3, name: 'Charlie' },
+  { id: 1, name: "Alice" },
+  { id: 2, name: "Bob" },
+  { id: 3, name: "Charlie" },
 ]);
 
 // --- View Component ---

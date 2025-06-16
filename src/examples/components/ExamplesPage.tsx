@@ -1,14 +1,11 @@
-import React from 'react';
-import { PerformanceBenchmark } from '../../components/Benchmark';
-import ExampleCard from './ExampleCard';
-import SignalExample from './SignalExample';
-import ShowExample from './ShowExample';
-import ActionExample from './ActionExample';
-import MemoExample from './MemoExample';
-import LoopExample from './LoopExample';
-import BindInputExample from './BindInputExample';
-import TimerExample from './TimerExample';
-import InteractiveShowcase from './InteractiveShowcase';
+import React from "react";
+import { PerformanceBenchmark } from "../../components/Benchmark";
+import ExampleCard from "./ExampleCard";
+import SignalExample from "./SignalExample";
+
+import LoopExample from "./LoopExample";
+import BindInputExample from "./BindInputExample";
+import TimerExample from "./TimerExample";
 
 const ExamplesPage = () => {
   return (
@@ -19,15 +16,6 @@ const ExamplesPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <ExampleCard title="Signal & S Component">
           <SignalExample />
-        </ExampleCard>
-        <ExampleCard title="Show (Conditional Rendering)">
-          <ShowExample />
-        </ExampleCard>
-        <ExampleCard title="Action (Side Effect)">
-          <ActionExample />
-        </ExampleCard>
-        <ExampleCard title="Computed Signal">
-          <MemoExample />
         </ExampleCard>
         <ExampleCard title="Loop (Reactive List)">
           <LoopExample />
@@ -40,9 +28,6 @@ const ExamplesPage = () => {
         </ExampleCard>
         <ExampleCard title="Timer Component">
           <TimerExample />
-        </ExampleCard>
-        <ExampleCard title="Interactive Showcase (VirtualList)">
-          <InteractiveShowcase />
         </ExampleCard>
       </div>
     </div>

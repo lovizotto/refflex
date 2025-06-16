@@ -1,24 +1,21 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { TransitionZone } from "../components/TransitionZone";
-import { useSignal, useSelector } from "../hooks/useSignal";
 import { Loop } from "../components/Loop";
-import { S } from "../components/S";
-import { BindInput } from "../components/BindInput";
 
 const meta = {
   title: "Components/TransitionZone",
   component: TransitionZone,
   parameters: {
-    layout: "fullscreen",
+    layout: "centered",
     docs: {
       description: {
         component: `
-A performance utility that wraps state updates in a React Transition.
-This keeps the UI responsive during slow or complex re-renders.
+Um componente que envolve as atualizações de seus filhos em uma Transição do React.
+Isso é útil para manter a UI responsiva quando uma mudança de estado causa uma re-renderização lenta ou complexa. Ele marca a atualização como não-urgente.
 
-### When to Use
-Use this component to wrap parts of your UI that update based on state but are slow to render, such as a large data grid that is being filtered. By marking the update as a transition, you prevent a laggy user experience in other parts of the UI (e.g., a search input).
+### Quando Usar
+Use para envolver partes da sua UI que são lentas para renderizar. Quando a prop \`children\` passada para o \`TransitionZone\` muda, ele renderizará o novo conteúdo como uma atualização não-urgente, impedindo que ele bloqueie interações mais importantes da UI (como botões ou inputs fora da zona).
         `,
       },
     },
@@ -29,75 +26,81 @@ Use this component to wrap parts of your UI that update based on state but are s
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// --- Helper Components for the Demo ---
+// --- Componentes Auxiliares para a Demonstração ---
 
-// A "heavy" component that simulates a slow render.
-const HeavyListItem = ({ text }: { text: string }) => {
-  // This is a contrived way to make a component "slow".
-  const startTime = performance.now();
-  while (performance.now() - startTime < 1) {
-    // Do nothing for 1ms to simulate a slow render
-  }
-  return <div className="p-2 border-b border-gray-200">{text}</div>;
+// Um componente "pesado" que simula uma renderização lenta criando muitos nós DOM.
+const HeavyComponent = () => {
+  const items = useMemo(
+    () => Array.from({ length: 500 }, (_, i) => `Sub-item ${i}`),
+    [],
+  );
+  return (
+    <div className="p-4 bg-gray-100 border rounded-lg">
+      <h4 className="font-bold mb-2">Componente Pesado</h4>
+      <p className="text-xs mb-2">Este componente é lento para renderizar.</p>
+      <div className="grid grid-cols-5 gap-1">
+        <Loop each={items}>
+          {(item) => (
+            <div className="text-xs p-1 bg-gray-200 rounded-sm">{item}</div>
+          )}
+        </Loop>
+      </div>
+    </div>
+  );
 };
 
-// A list of 300 items to filter.
-const allItems = Array.from({ length: 300 }, (_, i) => `Item ${i}`);
+const SimpleComponent = () => (
+  <div className="p-4 bg-green-100 border rounded-lg">
+    <h4 className="font-bold">Componente Simples</h4>
+    <p className="text-sm">Este componente renderiza instantaneamente.</p>
+  </div>
+);
 
-// --- Interactive Showcase ---
+// --- Vitrine Interativa ---
 const InteractiveExample = () => {
-  const searchTerm = useSignal("");
+  const [view, setView] = useState("simple");
 
-  // A computed signal that filters the large list. This can be a slow operation.
-  const filteredItems = useSelector(() => {
-    const term = searchTerm.get().toLowerCase();
-    if (!term) return allItems;
-    return allItems.filter((item) => item.toLowerCase().includes(term));
-  });
+  // O conteúdo que será renderizado é determinado pelo estado.
+  const content = view === "simple" ? <SimpleComponent /> : <HeavyComponent />;
 
   return (
-    <div className="p-8 w-full h-screen grid grid-cols-1 md:grid-cols-2 gap-8 bg-gray-50">
-      {/* --- Example WITHOUT TransitionZone --- */}
+    <div className="p-8 w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 bg-gray-50 font-sans">
+      {/* --- Exemplo SEM TransitionZone --- */}
       <div className="flex flex-col p-4 border rounded-lg bg-white shadow-sm">
-        <h3 className="text-lg font-bold mb-2">
-          Without TransitionZone (Laggy)
+        <h3 className="text-lg font-bold mb-2 text-red-600">
+          Sem TransitionZone (Lento)
         </h3>
         <p className="text-sm text-gray-600 mb-4">
-          Typing in this input will feel slow and janky because the UI must wait
-          for the entire list to re-render on every keystroke.
+          Clicar neste botão causará um congelamento notável, pois o app precisa
+          esperar o componente pesado renderizar.
         </p>
-        <BindInput
-          signal={searchTerm}
-          placeholder="Type to filter..."
-          className="p-2 border rounded-md mb-4"
-        />
-        <div className="border rounded-md h-full overflow-auto">
-          <Loop each={filteredItems}>
-            {(item) => <HeavyListItem text={item} />}
-          </Loop>
-        </div>
+        <button
+          onClick={() => setView((v) => (v === "simple" ? "heavy" : "simple"))}
+          className="p-2 border rounded-md mb-4 bg-red-100"
+        >
+          Alternar Visualização
+        </button>
+        <div className="border rounded-md p-2 flex-grow">{content}</div>
       </div>
 
-      {/* --- Example WITH TransitionZone --- */}
+      {/* --- Exemplo COM TransitionZone --- */}
       <div className="flex flex-col p-4 border rounded-lg bg-white shadow-sm">
-        <h3 className="text-lg font-bold mb-2">
-          With TransitionZone (Responsive)
+        <h3 className="text-lg font-bold mb-2 text-green-600">
+          Com TransitionZone (Responsivo)
         </h3>
         <p className="text-sm text-gray-600 mb-4">
-          Typing here feels fast. The input remains responsive while the list
-          updates in the background, marked as a non-urgent transition.
+          Clicar aqui é instantâneo. A UI permanece responsiva enquanto o
+          componente pesado é carregado em segundo plano.
         </p>
-        <BindInput
-          signal={searchTerm}
-          placeholder="Type to filter..."
-          className="p-2 border rounded-md mb-4"
-        />
-        <div className="border rounded-md h-full overflow-auto">
-          <TransitionZone>
-            <Loop each={filteredItems}>
-              {(item) => <HeavyListItem text={item} />}
-            </Loop>
-          </TransitionZone>
+        <button
+          onClick={() => setView((v) => (v === "heavy" ? "simple" : "heavy"))}
+          className="p-2 border rounded-md mb-4 bg-green-100"
+        >
+          Alternar Visualização
+        </button>
+        <div className="border rounded-md p-2 flex-grow">
+          {/* A TransitionZone recebe o novo filho (pesado) e adia sua renderização. */}
+          <TransitionZone>{content}</TransitionZone>
         </div>
       </div>
     </div>
@@ -105,9 +108,9 @@ const InteractiveExample = () => {
 };
 
 export const Default: Story = {
-  name: "Interactive Showcase",
+  name: "TransitionZone Showcase",
   render: () => <InteractiveExample />,
   args: {
-    children: <div />, // Placeholder arg for Storybook
+    children: <div />, // Argumento placeholder para o Storybook
   },
 };
