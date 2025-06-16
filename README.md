@@ -31,23 +31,17 @@ npm install reflex
 Signal provides a more flexible state management solution compared to useState. Unlike useState which is tied to a specific component, Signal can be shared across components and automatically tracks dependencies.
 
 ```jsx
-import { createSignal, Signal } from 'reflex';
+import { createSignal, S } from 'reflex';
 
 // Create a signal outside of components
-const [count, setCount] = createSignal(0);
+const count = createSignal(0);
 
 function Counter() {
   return (
     <div>
-      {/* Signal automatically subscribes to changes */}
-      <Signal value={count}>
-        {(value) => (
-          <>
-            <p>Count: {value}</p>
-            <button onClick={() => setCount(value + 1)}>Increment</button>
-          </>
-        )}
-      </Signal>
+      {/* S component automatically subscribes to changes */}
+      <p>Count: <S>{count}</S></p>
+      <button onClick={() => count.set(count.peek() + 1)}>Increment</button>
     </div>
   );
 }
@@ -58,13 +52,13 @@ function Counter() {
 Reflex provides a declarative way to work with WebSockets, handling connection management and cleanup automatically:
 
 ```jsx
-import { WebSocket, OnMessage, OnOpen, OnClose } from 'reflex';
+import { WebSocketProvider, OnMessage, OnOpen, OnClose, useWebSocket } from 'reflex';
 
 function WebSocketExample() {
   return (
-    <WebSocket url="wss://echo.example.com">
+    <WebSocketProvider url="wss://echo.example.com">
       <OnOpen>
-        {() => console.log('Connected to WebSocket server')}
+        {(event) => console.log('Connected to WebSocket server')}
       </OnOpen>
 
       <OnMessage>
@@ -72,16 +66,18 @@ function WebSocketExample() {
       </OnMessage>
 
       <OnClose>
-        {() => console.log('Disconnected from WebSocket server')}
+        {(event) => console.log('Disconnected from WebSocket server')}
       </OnClose>
 
       <button onClick={() => {
-        const socket = document.querySelector('[data-testid="websocket"]').value;
-        socket.send('Hello, WebSocket!');
+        const socket = useWebSocket();
+        if (socket) {
+          socket.send('Hello, WebSocket!');
+        }
       }}>
         Send Message
       </button>
-    </WebSocket>
+    </WebSocketProvider>
   );
 }
 ```
@@ -105,43 +101,43 @@ function NotificationExample() {
 }
 ```
 
-### Async Component
+### Resource Component
 
 Handle asynchronous operations declaratively without complex useState/useEffect combinations:
 
 ```jsx
-import { Async, AsyncPending, AsyncFulfilled, AsyncRejected } from 'reflex';
+import { Resource, ResourcePending, ResourceFulfilled, ResourceRejected } from 'reflex';
 
-function AsyncExample() {
+function ResourceExample() {
   const fetchData = async () => {
     const response = await fetch('https://api.example.com/data');
     return response.json();
   };
 
   return (
-    <Async task={fetchData}>
-      <AsyncPending>
+    <Resource task={fetchData}>
+      <ResourcePending>
         <p>Loading data...</p>
-      </AsyncPending>
+      </ResourcePending>
 
-      <AsyncFulfilled>
+      <ResourceFulfilled>
         {(data) => (
           <div>
             <h3>Data loaded successfully!</h3>
             <pre>{JSON.stringify(data, null, 2)}</pre>
           </div>
         )}
-      </AsyncFulfilled>
+      </ResourceFulfilled>
 
-      <AsyncRejected>
+      <ResourceRejected>
         {(error) => (
           <div>
             <h3>Error loading data</h3>
             <p>{error.message}</p>
           </div>
         )}
-      </AsyncRejected>
-    </Async>
+      </ResourceRejected>
+    </Resource>
   );
 }
 ```
@@ -151,21 +147,21 @@ function AsyncExample() {
 Iterate over arrays or signals with automatic updates when data changes:
 
 ```jsx
-import { Loop, createSignal } from 'reflex';
+import { Loop, createSignal, S } from 'reflex';
 
 function LoopExample() {
-  const [items, setItems] = createSignal(['Item 1', 'Item 2', 'Item 3']);
+  const items = createSignal(['Item 1', 'Item 2', 'Item 3']);
 
   return (
     <div>
       <Loop each={items}>
         {(item, index) => (
-          <div key={index}>
+          <div>
             <p>{item}</p>
             <button onClick={() => {
-              const newItems = [...items()];
+              const newItems = [...items.peek()];
               newItems.splice(index, 1);
-              setItems(newItems);
+              items.set(newItems);
             }}>
               Remove
             </button>
@@ -173,9 +169,11 @@ function LoopExample() {
         )}
       </Loop>
 
-      <button onClick={() => setItems([...items(), `Item ${items().length + 1}`])}>
+      <button onClick={() => items.set([...items.peek(), `Item ${items.peek().length + 1}`])}>
         Add Item
       </button>
+
+      <p>Total items: <S>{items.get().length}</S></p>
     </div>
   );
 }
@@ -186,24 +184,30 @@ function LoopExample() {
 Efficiently render large lists by only rendering the visible items:
 
 ```jsx
-import { VirtualList } from 'reflex';
+import { VirtualList, createSignal, S } from 'reflex';
 
 function VirtualListExample() {
-  // Create a large array of items
-  const items = Array.from({ length: 10000 }, (_, i) => `Item ${i + 1}`);
+  // Create a large array of items as a signal
+  const items = createSignal(
+    Array.from({ length: 10000 }, (_, i) => `Item ${i + 1}`)
+  );
 
   return (
-    <VirtualList
-      items={items}
-      height={400}
-      estimatedItemHeight={50}
-    >
-      {(item, index) => (
-        <div style={{ padding: '20px', borderBottom: '1px solid #eee' }}>
-          {item} (index: {index})
-        </div>
-      )}
-    </VirtualList>
+    <div>
+      <p>Showing <S>{items.get().length}</S> items</p>
+
+      <VirtualList
+        items={items}
+        height={400}
+        estimatedItemHeight={50}
+      >
+        {(item, index) => (
+          <div style={{ padding: '20px', borderBottom: '1px solid #eee' }}>
+            {item} (index: {index})
+          </div>
+        )}
+      </VirtualList>
+    </div>
   );
 }
 ```
