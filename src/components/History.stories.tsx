@@ -6,6 +6,7 @@ import { ViewState, State } from "./ViewState";
 import { S } from "./S";
 import { Cond, When, Otherwise } from "./Cond";
 import { createParams, locationSignal, navigate } from "./History";
+import { OnMount } from "./OnMount";
 
 const meta = {
   title: "Routing/History API",
@@ -82,11 +83,6 @@ const BasicRouter = () => {
   // The 'page' is derived reactively from the global location signal.
   const page = useSelector(() => locationSignal.get().pathname);
 
-  // Set initial route for Storybook environment.
-  React.useEffect(() => {
-    navigate("/home");
-  }, []);
-
   return (
     <div className="p-5 border rounded-lg w-[500px]">
       <h3 className="text-xl font-bold mb-2">Declarative Router</h3>
@@ -112,6 +108,7 @@ const BasicRouter = () => {
           </State>
         </ViewState>
       </div>
+      <OnMount do={() => navigate("/home")} />
     </div>
   );
 };
