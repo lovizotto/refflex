@@ -1,10 +1,10 @@
-import React from 'react';
-import { useSignal } from '../../hooks/useSignal';
-import { S } from '../../components/S';
-import BindInput from './BindInput';
+import React from "react";
+import { useSignal } from "../../hooks/useSignal";
+import { S } from "../../components/S";
+import { BindInput } from "../../components/BindInput";
 
 const BindInputExample = () => {
-  const text = useSignal('');
+  const text = useSignal("");
 
   return (
     <div className="flex flex-col">
