@@ -1,9 +1,12 @@
 // core/signals.ts
 
+type Effect = {
+  execute: () => void;
+  dependencies: Set<Set<Effect>>;
+};
+
 // This is our global tracker for automatic dependency detection.
-// When a signal is read, it checks if there's a current effect running
-// and adds that effect as a subscriber.
-let currentEffect: (() => void) | null = null;
+let currentEffect: Effect | null = null;
 
 export type Signal<T> = {
   // Read the signal's value and subscribe the current effect.
@@ -24,12 +27,14 @@ export type Signal<T> = {
  */
 export function createSignal<T>(initialValue: T): Signal<T> {
   let value = initialValue;
-  const subscribers = new Set<() => void>();
+  const subscribers = new Set<Effect>();
 
   const get = (): T => {
     // If there's an active effect, subscribe it to this signal.
     if (currentEffect) {
       subscribers.add(currentEffect);
+      // The effect also tracks this signal's subscriber list as a dependency.
+      currentEffect.dependencies.add(subscribers);
     }
     return value;
   };
@@ -40,16 +45,21 @@ export function createSignal<T>(initialValue: T): Signal<T> {
       value = newValue;
       // Notify all subscribers about the change.
       // We create a copy to avoid issues if a subscriber unsubscribes during the loop.
-      [...subscribers].forEach(callback => callback());
+      [...subscribers].forEach(effect => effect.execute());
     }
   };
 
   const peek = (): T => value;
 
   const subscribe = (callback: () => void): (() => void) => {
-    subscribers.add(callback);
+    // For manual subscriptions, we create a simple effect object.
+    const effect: Effect = {
+      execute: callback,
+      dependencies: new Set(),
+    };
+    subscribers.add(effect);
     // Return an unsubscribe function.
-    return () => subscribers.delete(callback);
+    return () => subscribers.delete(effect);
   };
 
   return { get, set, peek, subscribe };
@@ -57,32 +67,44 @@ export function createSignal<T>(initialValue: T): Signal<T> {
 
 /**
  * Creates a side effect that re-runs whenever its dependent signals change.
+ * This is now a robust implementation with proper cleanup.
  * @param effectFn The function to run as an effect.
- * @returns A dispose function to stop the effect and clean up subscriptions.
+ * @returns A dispose function to stop the effect and clean up all subscriptions.
  */
 export function createEffect(effectFn: () => void): () => void {
-  const execute = () => {
-    // Set this effect as the current one being tracked.
-    currentEffect = execute;
-    try {
-      // Run the user's effect function. Any signal `get()` called inside
-      // will now subscribe this `execute` function.
-      effectFn();
-    } finally {
-      // Clean up the global tracker after the effect runs.
-      currentEffect = null;
-    }
+  // The cleanup function iterates through all dependencies (signal subscriber sets)
+  // and removes this effect from them.
+  const cleanup = () => {
+    effect.dependencies.forEach(dep => {
+      dep.delete(effect);
+    });
+    effect.dependencies.clear();
   };
-  // Run the effect for the first time to establish initial subscriptions.
-  execute();
 
-  // The concept of a returned dispose function is correct, but since subscriptions
-  // are dynamic, we don't have a simple list to clean up. In a real-world lib,
-  // this would be more complex. For this example, we'll keep it simple.
-  // A true implementation would clear old dependencies on each run.
-  return () => {
-    // In a full implementation, we'd need to track and clear subscriptions here.
+  // The effect object now holds its own dependencies.
+  const effect: Effect = {
+    execute: () => {
+      // Before running the effect, clean up old dependencies.
+      // This is crucial for correctness if dependencies are conditional.
+      cleanup();
+      // Set this as the current effect being tracked.
+      currentEffect = effect;
+      try {
+        effectFn();
+      } finally {
+        // Unset the global tracker after the effect has run.
+        currentEffect = null;
+      }
+    },
+    dependencies: new Set(),
   };
+
+  // Run the effect for the first time to establish initial subscriptions.
+  effect.execute();
+
+  // The returned dispose function is now fully functional.
+  // It performs a final cleanup of all subscriptions.
+  return cleanup;
 }
 
 /**
