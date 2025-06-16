@@ -1,6 +1,11 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Resource, ResourcePending, ResourceFulfilled, ResourceRejected } from './Resource';
-import { useState, useCallback } from 'react';
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  Resource,
+  ResourcePending,
+  ResourceFulfilled,
+  ResourceRejected,
+} from "./Resource";
+import { useState, useCallback } from "react";
 
 // Define a type for the user data for better type safety.
 type User = {
@@ -12,10 +17,10 @@ type User = {
 };
 
 const meta = {
-  title: 'Components/Resource',
+  title: "Components/Resource",
   component: Resource,
   parameters: {
-    layout: 'centered',
+    layout: "centered",
     // Component-level documentation. This will appear on the main Docs page.
     docs: {
       description: {
@@ -69,7 +74,7 @@ const fetchUser = useCallback(async () => {
     },
   },
   // This tag enables the auto-generated documentation page.
-  tags: ['autodocs'],
+  tags: ["autodocs"],
 } satisfies Meta<typeof Resource>;
 
 export default meta;
@@ -85,34 +90,51 @@ const UserResourceExample = () => {
   // preventing the useEffect in <Resource> from causing an infinite loop.
   const fetchUser = useCallback(async (): Promise<User> => {
     // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     return {
       id: 1,
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      role: 'Administrator',
+      name: "Jane Smith",
+      email: "jane@example.com",
+      role: "Administrator",
       lastLogin: new Date().toLocaleString(),
     };
   }, []); // Empty dependency array means the function is created only once.
 
   // Function to trigger a reload by changing the key.
-  const reload = () => setKey(prev => prev + 1);
+  const reload = () => setKey((prev) => prev + 1);
 
+  // @ts-ignore
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '8px', minWidth: '300px' }}>
+    <div
+      style={{
+        padding: "20px",
+        border: "1px solid #ccc",
+        borderRadius: "8px",
+        minWidth: "300px",
+      }}
+    >
       <button onClick={reload}>Reload User</button>
-      <div style={{ marginTop: '10px' }}>
-        <Resource<User> key={key} task={fetchUser}>
+      <div style={{ marginTop: "10px" }}>
+        <Resource<User>
+          key={key}
+          task={fetchUser}
+        >
           <ResourcePending>
             <p>Loading user profile...</p>
           </ResourcePending>
           <ResourceFulfilled>
-            {(user) => (
+            {(user: { id: number; name: string; lastLogin: string }) => (
               <div>
                 <h4>User Profile</h4>
-                <p><strong>ID:</strong> {user.id}</p>
-                <p><strong>Name:</strong> {user.name}</p>
-                <p><strong>Last Login:</strong> {user.lastLogin}</p>
+                <p>
+                  <strong>ID:</strong> {user.id}
+                </p>
+                <p>
+                  <strong>Name:</strong> {user.name}
+                </p>
+                <p>
+                  <strong>Last Login:</strong> {user.lastLogin}
+                </p>
               </div>
             )}
           </ResourceFulfilled>
@@ -134,19 +156,32 @@ const ProductResourceErrorExample = () => {
   const fetchProduct = useCallback(async () => {
     // Simulate a failing API call
     await new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Product not found or server error')), 1500)
+      setTimeout(
+        () => reject(new Error("Product not found or server error")),
+        1500,
+      ),
     );
     // This return is just for type consistency; it's unreachable.
     return null;
   }, []);
 
-  const retry = () => setKey(prev => prev + 1);
+  const retry = () => setKey((prev) => prev + 1);
 
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '8px', minWidth: '300px' }}>
+    <div
+      style={{
+        padding: "20px",
+        border: "1px solid #ccc",
+        borderRadius: "8px",
+        minWidth: "300px",
+      }}
+    >
       <button onClick={retry}>Retry Fetch</button>
-      <div style={{ marginTop: '10px' }}>
-        <Resource key={key} task={fetchProduct}>
+      <div style={{ marginTop: "10px" }}>
+        <Resource
+          key={key}
+          task={fetchProduct}
+        >
           <ResourcePending>
             <p>Fetching product details...</p>
           </ResourcePending>
@@ -155,9 +190,9 @@ const ProductResourceErrorExample = () => {
           </ResourceFulfilled>
           <ResourceRejected>
             {(error) => (
-              <div style={{ color: 'red' }}>
+              <div style={{ color: "red" }}>
                 <h4>Error Loading Product</h4>
-                <p>{error?.message || 'Unknown error'}</p>
+                <p>{error?.message || "Unknown error"}</p>
               </div>
             )}
           </ResourceRejected>
@@ -174,6 +209,16 @@ const ProductResourceErrorExample = () => {
 export const SuccessState: Story = {
   name: "✅ Success Flow",
   render: () => <UserResourceExample />,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "This example shows how to fetch user data and display it once loaded.",
+      },
+    },
+  },
+  //@ts-ignore
+  args: {},
 };
 
 /**
@@ -183,4 +228,6 @@ export const SuccessState: Story = {
 export const ErrorState: Story = {
   name: "❌ Error Flow",
   render: () => <ProductResourceErrorExample />,
+  //@ts-ignore
+  args: {},
 };

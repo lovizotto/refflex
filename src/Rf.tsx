@@ -1,12 +1,6 @@
 import { Timer } from "./components/Timer";
 import { When } from "./components/When";
-import {
-  Async,
-  AsyncFulfilled,
-  AsyncPending,
-  AsyncRejected,
-  EndAsync,
-} from "./components/Async";
+
 import { TransitionZone } from "./components/TransitionZone";
 import { OnMount } from "./components/OnMount";
 import { OnUpdate } from "./components/OnUpdate";
@@ -70,11 +64,7 @@ export const Rf = {
   Memo,
   Cond,
   Otherwise,
-  Async,
-  Pending: AsyncPending,
-  Fulfilled: AsyncFulfilled,
-  Rejected: AsyncRejected,
-  EndAsync,
+
   Run,
   StateGroup,
   State,

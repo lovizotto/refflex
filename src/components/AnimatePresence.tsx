@@ -1,77 +1,71 @@
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect, ReactNode } from "react";
+import { Signal } from "../core/signals";
+import { useSelector } from "../hooks/useSignal";
 
-/**
- * AnimatePresence Component
- * 
- * A component that provides a fade animation when showing or hiding content.
- * It keeps the children in the DOM until the exit animation completes.
- * 
- * @component
- * @example
- * ```tsx
- * // Basic usage
- * <AnimatePresence show={isVisible}>
- *   <div>This content will fade in and out</div>
- * </AnimatePresence>
- * 
- * // Custom animation duration
- * <AnimatePresence show={isVisible} duration={500}>
- *   <div>This content will fade in and out over 500ms</div>
- * </AnimatePresence>
- * ```
- */
-export function AnimatePresence({ 
-  show, 
-  children, 
-  duration = 300 
-}: {
-  /** 
-   * Controls whether the children are visible.
-   * When true, children fade in; when false, children fade out.
+// Helper to check if a value is a signal object
+function isSignal<T>(val: any): val is Signal<T> {
+  return (
+    typeof val === "object" &&
+    val !== null &&
+    "get" in val &&
+    "subscribe" in val
+  );
+}
+
+type AnimatePresenceProps = {
+  /**
+   * Controls whether the children are visible. Can be a boolean or a signal.
    */
-  show: boolean;
-
+  show: boolean | Signal<boolean>;
   /**
    * The content to be rendered with the fade animation.
    */
-  children: React.ReactNode;
-
+  children: ReactNode;
   /**
    * The duration of the fade animation in milliseconds.
-   * Default is 300ms.
+   * @default 300
    */
   duration?: number;
-}) {
-  // State to control whether the children should be rendered in the DOM
-  const [render, setRender] = useState(show);
+};
+
+/**
+ * A component that provides a fade animation when showing or hiding content.
+ * It keeps children in the DOM until the exit animation completes, and is
+ * optimized to be controlled by signals.
+ */
+export function AnimatePresence({
+  show,
+  children,
+  duration = 300,
+}: AnimatePresenceProps) {
+  // `useSelector` reactively gets the boolean value from either a signal or a plain prop.
+  const isVisible = useSelector(() => (isSignal(show) ? show.get() : show));
+
+  // This state determines if the children are in the DOM.
+  const [shouldRender, setShouldRender] = useState(isVisible);
 
   useEffect(() => {
-    /**
-     * This effect handles the mounting/unmounting of children:
-     * 1. When 'show' becomes true, immediately render the children
-     * 2. When 'show' becomes false, wait for the animation to complete
-     *    before removing the children from the DOM
-     */
-    if (show) {
-      // Immediately render when showing
-      setRender(true);
+    if (isVisible) {
+      // If showing, immediately add children to the DOM to start the fade-in animation.
+      setShouldRender(true);
     } else {
-      // Delay unmounting until animation completes
-      setTimeout(() => setRender(false), duration);
+      // If hiding, wait for the fade-out animation to finish before removing from the DOM.
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, duration);
+      return () => clearTimeout(timer);
     }
-  }, [show, duration]);
+  }, [isVisible, duration]);
 
   return (
     <div
       style={{
-        // Control opacity based on the 'show' prop
-        opacity: show ? 1 : 0,
-        // Apply CSS transition for smooth animation
-        transition: `opacity ${duration}ms ease`,
+        opacity: isVisible ? 1 : 0,
+        transition: `opacity ${duration}ms ease-in-out`,
       }}
     >
-      {/* Only render children when the 'render' state is true */}
-      {render && children}
+      {/* The content remains mounted during the fade-out animation. */}
+      {shouldRender && children}
     </div>
   );
 }
