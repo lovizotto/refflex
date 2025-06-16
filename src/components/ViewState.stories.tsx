@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import React, { useState } from "react";
-import { ViewState, State } from "../components/ViewState";
+import { ViewState, State } from "./ViewState";
 import { useSignal, useSelector, useComputed } from "../hooks/useSignal";
-import { S } from "../components/S";
-import { BindInput } from "../components/BindInput";
+import { S } from "./S";
+import { BindInput } from "./BindInput";
 
 const meta = {
   title: "Components/ViewState",
