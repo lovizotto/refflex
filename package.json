@@ -39,7 +39,8 @@
     "@tailwindcss/vite": "^4.1.10",
     "postcss": "^8.5.5",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "recharts": "^2.15.3"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^4.0.0",

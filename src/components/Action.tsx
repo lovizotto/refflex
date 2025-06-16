@@ -1,116 +1,82 @@
-import { useEffect } from 'react';
-import { trackSignal } from '../core/createSignal';
+import { useEffect, useRef } from 'react';
+import { createEffect, Signal } from '../core/signals';
 
-/**
- * Action Component
- * 
- * A utility component that watches for changes in values and triggers a callback when they change.
- * This component doesn't render anything visible but provides reactive functionality.
- * 
- * @component
- * @example
- * ```tsx
- * // Watch a single value
- * <Action 
- *   watch={() => count()} 
- *   onTrigger={(value) => console.log('Count changed:', value)} 
- * />
- * 
- * // Watch multiple values
- * <Action 
- *   watch={[() => count(), () => name()]} 
- *   onTrigger={(values) => console.log('Values changed:', values)} 
- * />
- * 
- * // Trigger immediately on mount
- * <Action 
- *   watch={() => count()} 
- *   onTrigger={(value) => console.log('Initial count:', value)} 
- *   immediate={true} 
- * />
- * ```
- */
-export function Action({
-  watch,
-  onTrigger,
-  immediate = false,
-}: {
-  /** 
-   * A function or array of functions that return values to watch for changes.
-   * Each function should return a value that can be tracked.
-   */
-  watch?: (() => any) | Array<() => any>;
+// Helper to robustly check if a value is a signal object
+function isSignal<T>(val: any): val is Signal<T> {
+  return typeof val === 'object' && val !== null && 'get' in val && 'subscribe' in val;
+}
 
+type ActionProps<T> = {
   /**
-   * Callback function that is called when the watched values change.
-   * Receives the new value(s) as its argument.
+   * The value(s) to watch. Can be a signal, a plain value (from useState),
+   * or an array of signals/values.
    */
-  onTrigger: (val?: any) => void;
-
+  watch: T | Signal<T> | (T | Signal<T>)[];
+  /**
+   * The callback function that is triggered when any of the watched values change.
+   * It receives the new value or an array of new values.
+   */
+  onTrigger: (value: T | T[]) => void;
   /**
    * If true, the onTrigger callback will be called immediately when the component mounts.
-   * Default is false.
+   * @default false
    */
   immediate?: boolean;
-}) {
+};
+
+/**
+ * A utility component that creates a reactive side-effect. It watches for changes
+ * in signals or plain React state and triggers a callback function in response.
+ * This component does not render any visible UI.
+ */
+export function Action<T>({
+                            watch,
+                            onTrigger,
+                            immediate = false,
+                          }: ActionProps<T>) {
+  // Use a ref to track the initial render, ensuring the 'immediate' flag is respected.
+  const isInitialMount = useRef(true);
+
   useEffect(() => {
-    /**
-     * This effect runs only once on component mount (empty dependency array).
-     * It sets up the reactive tracking for the watched values.
-     */
+    // Check if we are watching a signal or an array of signals.
+    const isWatchingSignal = Array.isArray(watch)
+      ? watch.length > 0 && isSignal(watch[0])
+      : isSignal(watch);
 
-    // Handle immediate trigger on mount if the immediate flag is true
-    if (immediate) {
-      // If watch is an array, call each function and collect the results
-      // Otherwise, call the single watch function
-      const val = Array.isArray(watch) ? watch.map((fn) => fn()) : watch?.();
-      // Trigger the callback with the initial value(s)
-      onTrigger?.(val);
-    }
+    if (isWatchingSignal) {
+      // --- Signal-based reactivity ---
+      const dispose = createEffect(() => {
+        // Automatically subscribes to all signals read within this block.
+        const value = Array.isArray(watch)
+          ? (watch as Signal<T>[]).map(s => s.get())
+          : (watch as Signal<T>).get();
 
-    // Case 1: Handle single watch function
-    if (watch && !Array.isArray(watch)) {
-      /**
-       * Create a run function that:
-       * 1. Gets the current value from the watch function
-       * 2. Calls onTrigger with that value
-       */
-      const run = () => {
-        const val = watch();
-        onTrigger(val);
-      };
-      // Set up tracking for the watch function
-      // This will re-run the run function whenever the watched value changes
-      trackSignal(run, watch);
-    }
+        if (isInitialMount.current && !immediate) {
+          // Don't trigger on the first run if 'immediate' is false.
+        } else {
+          onTrigger(value);
+        }
 
-    // Case 2: Handle array of watch functions
-    if (watch && Array.isArray(watch)) {
-      /**
-       * Create a single runAll function that:
-       * 1. Gets all current values from all watch functions
-       * 2. Calls onTrigger with an array of those values
-       */
-      const runAll = () => {
-        const values = watch.map(fn => fn());
-        onTrigger(values);
-      };
-
-      /**
-       * For each watch function in the array:
-       * 1. Create a tracker function that calls runAll
-       * 2. Set up tracking for that watch function
-       * 
-       * This ensures that whenever ANY of the watched values changes,
-       * the runAll function is called, which collects ALL current values
-       * and passes them to onTrigger.
-       */
-      watch.forEach(watchFn => {
-        const tracker = () => runAll();
-        trackSignal(tracker, watchFn);
+        isInitialMount.current = false;
       });
-    }
-  }, []);
 
-  return null;
+      // Cleanup the signal effect when the component unmounts or props change.
+      return () => {
+        dispose();
+        isInitialMount.current = true; // Reset for the next effect setup.
+      };
+    } else {
+      // --- Standard React reactivity (for useState values) ---
+      // This logic runs because 'watch' is in the dependency array.
+      if (isInitialMount.current && !immediate) {
+        // Skip the initial trigger if not immediate.
+      } else {
+        onTrigger(watch as T | T[]);
+      }
+
+      isInitialMount.current = false;
+    }
+  }, [watch, onTrigger, immediate]); // This dependency array drives the reactivity for plain values.
+
+  return null; // This component does not render anything.
 }

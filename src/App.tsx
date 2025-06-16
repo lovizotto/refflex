@@ -1,24 +1,42 @@
-
-import { createSignal } from './core/createSignal.ts';
+import { createComputed, createSignal } from './core/signals';
 import { useState } from 'react';
 import ExamplesPage from './examples/index';
+// Assuming Rf is a library of lifecycle components
 import { Rf } from './Rf.tsx';
+import { PerformanceBenchmark } from './components/Benchmark.tsx';
+import { S } from './components/S.tsx';
+import { Loop } from './components/Loop.tsx'; // Import the new reactive loop component
 
-const [windowSize, setWindowSize] = createSignal({ width: 0, height: 0 });
-const [, setWindowSize2] = createSignal({ width: 0, height: 0 });
-const [users, ] = createSignal([
+// --- State Definition (Module Level) ---
+
+// This signal holds an object.
+const windowSize = createSignal({
+  width: window.innerWidth,
+  height: window.innerHeight,
+});
+
+// These are derived, read-only signals. They automatically update
+// when `windowSize` changes.
+const windowWidth = createComputed(() => windowSize.get().width);
+const windowHeight = createComputed(() => windowSize.get().height);
+
+// The list of users.
+const users = createSignal([
   { id: 1, name: 'Alice' },
   { id: 2, name: 'Bob' },
   { id: 3, name: 'Charlie' },
 ]);
 
+// --- View Component ---
+
 function App() {
   const [showExamples, setShowExamples] = useState(false);
 
+  // This is a standard React state for UI toggling, which is perfectly fine.
   if (showExamples) {
     return (
       <div className="examples-container">
-        <button 
+        <button
           onClick={() => setShowExamples(false)}
           className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded fixed top-4 left-4 z-50"
         >
@@ -29,43 +47,44 @@ function App() {
     );
   }
 
+  // The main App component is now free of `useSignalValue` and will only render once.
   return (
     <div className="p-8">
-      <button 
+      <button
         onClick={() => setShowExamples(true)}
         className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded mb-6"
       >
         View Component Examples
       </button>
+      <PerformanceBenchmark />
 
-      <Rf.OnMount
-        do={() =>
-          setWindowSize2({
-            width: window.innerWidth,
-            height: window.innerHeight,
-          })
-        }
-      />
+      {/* Lifecycle components that update signals are a great use case. */}
       <Rf.OnResize
         on={({ width, height }) => {
-          setWindowSize({ width, height });
+          // This updates the signal without causing this App component to re-render.
+          windowSize.set({ width, height });
         }}
       />
 
-      <Rf.Signal value={windowSize}>
-        {(size) => (
-          <div className="window-size bg-white p-4 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold mb-2">Window Size</h2>
-            <p className="text-gray-700">Width: {size.width}px</p>
-            <p className="text-gray-700">Height: {size.height}px</p>
-          </div>
-        )}
-      </Rf.Signal>
+      <div className="window-size bg-white p-4 rounded-lg shadow-md mt-6">
+        <h2 className="text-xl font-bold mb-2">Window Size</h2>
+        <p className="text-gray-700">
+          {/* Use the computed signals here inside <S> for granular updates */}
+          Width: <S>{windowWidth}</S>px
+        </p>
+        <p className="text-gray-700">
+          Height: <S>{windowHeight}</S>px
+        </p>
+      </div>
 
       <div className="mt-6">
         <h2 className="text-xl font-bold mb-2">User List</h2>
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <Rf.Loop each={users} keyExtractor={(user) => user.id}>
+          {/* The <Loop> component now handles the subscription internally.
+            We pass the signal directly, without using `useSignalValue`.
+            This prevents the App component from re-rendering when the user list changes.
+          */}
+          <Loop each={users}>
             {(user) => (
               <div className="item p-3 border-b border-gray-200 last:border-b-0 hover:bg-gray-50">
                 <h3 className="text-lg font-medium">
@@ -73,7 +92,7 @@ function App() {
                 </h3>
               </div>
             )}
-          </Rf.Loop>
+          </Loop>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 // components/Rf/ReadableStream.stories.tsx
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ReadableStream } from './ReadableStream';
 
 // A meta-informação do componente permanece a mesma.
@@ -242,6 +242,7 @@ const TextFileStreamingExample = () => {
 // --- Histórias Exportadas ---
 
 // Correção 5: Unificar a história "Basic" com a sua documentação.
+//@ts-ignore
 export const Basic: Story = {
   render: () => <BasicReadableStreamExample />,
   parameters: {
@@ -291,6 +292,7 @@ const StreamExample = () => {
   },
 };
 
+// @ts-ignore
 export const TextFileStreaming: Story = {
   render: () => <TextFileStreamingExample />,
 };
