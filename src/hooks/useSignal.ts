@@ -1,6 +1,6 @@
 // hooks/useSignal.ts
-import { useMemo, useSyncExternalStore } from 'react';
-import { createSignal, createComputed, Signal } from '../core/signals';
+import { useMemo, useSyncExternalStore } from "react";
+import { createSignal, createComputed, Signal } from "../core/signals";
 
 /**
  * A hook to create a signal that is memoized for the component's lifecycle.
@@ -36,6 +36,26 @@ export function useSignalValue<T>(signal: Signal<T>): T {
   return useSyncExternalStore(
     signal.subscribe,
     signal.get,
-    signal.peek // Server snapshot (optional but good practice)
+    signal.peek, // Server snapshot (optional but good practice)
   );
+}
+
+/**
+ * A hook that combines `useComputed` and `useSignalValue`.
+ * It creates a derived signal from a function and subscribes the component to it,
+ * returning the plain value and triggering re-renders on change.
+ * This is the most ergonomic way to get reactive, computed values into your components.
+ *
+ * @param selectorFn A function that computes a value from one or more signals.
+ * @returns The computed value.
+ *
+ * @example
+ * const isEven = useSelector(() => count.get() % 2 === 0);
+ * // `isEven` is now a reactive boolean.
+ */
+export function useSelector<T>(selectorFn: () => T): T {
+  // 1. Create the derived signal.
+  const computedSignal = useComputed(selectorFn);
+  // 2. Subscribe to it and return its value.
+  return useSignalValue(computedSignal);
 }

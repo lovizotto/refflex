@@ -1,16 +1,16 @@
-// components/Rf/ReadableStream.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react-vite';
-import { useState, useEffect } from 'react';
-import { ReadableStream } from './ReadableStream';
+// components/Rf/_ReadableStream.stories.tsx
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useState, useEffect } from "react";
+import { ReadableStream } from "./ReadableStream";
 
 // A meta-informação do componente permanece a mesma.
 const meta = {
-  title: 'Components/ReadableStream',
+  title: "Components/ReadableStream",
   component: ReadableStream,
   parameters: {
-    layout: 'centered',
+    layout: "centered",
   },
-  tags: ['autodocs'],
+  tags: ["autodocs"],
 } satisfies Meta<typeof ReadableStream>;
 
 export default meta;
@@ -64,14 +64,21 @@ const BasicReadableStreamExample = () => {
   // Correção 2: Substituir `createSignal` por `React.useState` para gestão de estado padrão do React.
   const [messages, setMessages] = useState<string[]>([]);
   const [isStreamClosed, setIsStreamClosed] = useState(false);
-  const [inputMessage, setInputMessage] = useState('');
+  const [inputMessage, setInputMessage] = useState("");
 
   const addMessage = (message: string) => {
-    setMessages(prev => [...prev, message]);
+    setMessages((prev) => [...prev, message]);
   };
 
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px', width: '400px' }}>
+    <div
+      style={{
+        padding: "20px",
+        border: "1px solid #ccc",
+        borderRadius: "4px",
+        width: "400px",
+      }}
+    >
       <h3>Exemplo Básico de ReadableStream</h3>
 
       <ReadableStream
@@ -81,34 +88,36 @@ const BasicReadableStreamExample = () => {
           addMessage(`Recebido: ${text}`);
         }}
         onDone={() => {
-          addMessage('Stream fechada');
+          addMessage("Stream fechada");
           setIsStreamClosed(true);
         }}
         onError={(err) => {
-          addMessage(`Erro: ${err.message || 'Erro desconhecido'}`);
+          addMessage(`Erro: ${err.message || "Erro desconhecido"}`);
           setIsStreamClosed(true); // Também fechar em caso de erro
         }}
       >
-        <div style={{ marginTop: '10px', marginBottom: '10px' }}>
-          <div style={{
-            display: 'inline-block',
-            padding: '5px 10px',
-            // Correção 3: Acessar o estado diretamente (isStreamClosed) em vez de como função (isStreamClosed()).
-            backgroundColor: isStreamClosed ? '#F44336' : '#4CAF50',
-            color: 'white',
-            borderRadius: '4px'
-          }}>
-            Stream {isStreamClosed ? 'Fechada' : 'Aberta'}
+        <div style={{ marginTop: "10px", marginBottom: "10px" }}>
+          <div
+            style={{
+              display: "inline-block",
+              padding: "5px 10px",
+              // Correção 3: Acessar o estado diretamente (isStreamClosed) em vez de como função (isStreamClosed()).
+              backgroundColor: isStreamClosed ? "#F44336" : "#4CAF50",
+              color: "white",
+              borderRadius: "4px",
+            }}
+          >
+            Stream {isStreamClosed ? "Fechada" : "Aberta"}
           </div>
         </div>
 
-        <div style={{ marginBottom: '10px' }}>
+        <div style={{ marginBottom: "10px" }}>
           <input
             type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             placeholder="Digite uma mensagem para enviar"
-            style={{ padding: '8px', marginRight: '10px', width: '70%' }}
+            style={{ padding: "8px", marginRight: "10px", width: "70%" }}
             disabled={isStreamClosed}
           />
           <button
@@ -116,10 +125,10 @@ const BasicReadableStreamExample = () => {
               if (inputMessage.trim()) {
                 mockStream.pushData(inputMessage);
                 addMessage(`Enviado: ${inputMessage}`);
-                setInputMessage('');
+                setInputMessage("");
               }
             }}
-            style={{ padding: '8px 12px' }}
+            style={{ padding: "8px 12px" }}
             disabled={isStreamClosed}
           >
             Enviar
@@ -127,20 +136,43 @@ const BasicReadableStreamExample = () => {
         </div>
 
         <div>
-          <button onClick={() => mockStream.close()} style={{ padding: '8px 12px', marginRight: '10px' }} disabled={isStreamClosed}>
+          <button
+            onClick={() => mockStream.close()}
+            style={{ padding: "8px 12px", marginRight: "10px" }}
+            disabled={isStreamClosed}
+          >
             Fechar Stream
           </button>
-          <button onClick={() => mockStream.error(new Error('Erro simulado'))} style={{ padding: '8px 12px' }} disabled={isStreamClosed}>
+          <button
+            onClick={() => mockStream.error(new Error("Erro simulado"))}
+            style={{ padding: "8px 12px" }}
+            disabled={isStreamClosed}
+          >
             Disparar Erro
           </button>
         </div>
 
-        <div style={{ marginTop: '10px' }}>
+        <div style={{ marginTop: "10px" }}>
           <h4>Mensagens:</h4>
-          <div style={{ maxHeight: '200px', overflowY: 'auto', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-            <ul style={{ margin: 0, padding: 0, listStyleType: 'none' }}>
+          <div
+            style={{
+              maxHeight: "200px",
+              overflowY: "auto",
+              padding: "10px",
+              backgroundColor: "#f5f5f5",
+              borderRadius: "4px",
+            }}
+          >
+            <ul style={{ margin: 0, padding: 0, listStyleType: "none" }}>
               {messages.map((msg, index) => (
-                <li key={index} style={{ padding: '5px', borderBottom: index < messages.length - 1 ? '1px solid #ddd' : 'none' }}>
+                <li
+                  key={index}
+                  style={{
+                    padding: "5px",
+                    borderBottom:
+                      index < messages.length - 1 ? "1px solid #ddd" : "none",
+                  }}
+                >
                   {msg}
                 </li>
               ))}
@@ -158,7 +190,7 @@ const TextFileStreamingExample = () => {
   const [mockStream] = useState(() => new MockReadableStream());
 
   // Correção 2: Usar `useState` em vez de `createSignal`.
-  const [content, setContent] = useState<string>('');
+  const [content, setContent] = useState<string>("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -170,12 +202,12 @@ const TextFileStreamingExample = () => {
     }
 
     const text = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget aliquam nisl nisl eget nisl.`;
-    const chunks = text.split(' ');
+    const chunks = text.split(" ");
     let index = 0;
 
     const intervalId = setInterval(() => {
       if (index < chunks.length) {
-        mockStream.pushData(chunks[index] + ' ');
+        mockStream.pushData(chunks[index] + " ");
         index++;
         setProgress(Math.floor((index / chunks.length) * 100));
       } else {
@@ -191,45 +223,93 @@ const TextFileStreamingExample = () => {
   }, [isStreaming, mockStream]); // Depender de `isStreaming` para iniciar/parar.
 
   const startStreaming = () => {
-    setContent('');
+    setContent("");
     setError(null);
     setProgress(0);
     setIsStreaming(true);
   };
 
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px', width: '500px' }}>
+    <div
+      style={{
+        padding: "20px",
+        border: "1px solid #ccc",
+        borderRadius: "4px",
+        width: "500px",
+      }}
+    >
       <h3>Exemplo de Streaming de Ficheiro de Texto</h3>
       <ReadableStream
         src={mockStream.getStream()}
         onChunk={(chunk) => {
           const text = new TextDecoder().decode(chunk);
-          setContent(prev => prev + text);
+          setContent((prev) => prev + text);
         }}
         onDone={() => setIsStreaming(false)}
         onError={(err) => {
-          setError(err.message || 'Erro desconhecido');
+          setError(err.message || "Erro desconhecido");
           setIsStreaming(false);
         }}
       >
-        <button onClick={startStreaming} style={{ padding: '8px 12px' }} disabled={isStreaming}>
+        <button
+          onClick={startStreaming}
+          style={{ padding: "8px 12px" }}
+          disabled={isStreaming}
+        >
           Iniciar Streaming
         </button>
 
         {isStreaming && (
-          <div style={{ margin: '15px 0' }}>
-            <div style={{ width: '100%', backgroundColor: '#e0e0e0', borderRadius: '4px' }}>
-              <div style={{ width: `${progress}%`, height: '10px', backgroundColor: '#4CAF50', transition: 'width 0.2s' }} />
+          <div style={{ margin: "15px 0" }}>
+            <div
+              style={{
+                width: "100%",
+                backgroundColor: "#e0e0e0",
+                borderRadius: "4px",
+              }}
+            >
+              <div
+                style={{
+                  width: `${progress}%`,
+                  height: "10px",
+                  backgroundColor: "#4CAF50",
+                  transition: "width 0.2s",
+                }}
+              />
             </div>
-            <div style={{ textAlign: 'center', marginTop: '5px' }}>{progress}% concluído</div>
+            <div style={{ textAlign: "center", marginTop: "5px" }}>
+              {progress}% concluído
+            </div>
           </div>
         )}
 
-        {error && <div style={{ color: '#c62828', backgroundColor: '#ffebee', padding: '10px', borderRadius: '4px', margin: '15px 0' }}>Erro: {error}</div>}
+        {error && (
+          <div
+            style={{
+              color: "#c62828",
+              backgroundColor: "#ffebee",
+              padding: "10px",
+              borderRadius: "4px",
+              margin: "15px 0",
+            }}
+          >
+            Erro: {error}
+          </div>
+        )}
 
-        <div style={{ marginTop: '10px' }}>
+        <div style={{ marginTop: "10px" }}>
           <h4>Conteúdo do Ficheiro:</h4>
-          <div style={{ height: '200px', overflowY: 'auto', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+          <div
+            style={{
+              height: "200px",
+              overflowY: "auto",
+              padding: "10px",
+              backgroundColor: "#f5f5f5",
+              borderRadius: "4px",
+              fontFamily: "monospace",
+              whiteSpace: "pre-wrap",
+            }}
+          >
             {content || 'Clique em "Iniciar Streaming" para começar.'}
           </div>
         </div>
@@ -237,7 +317,6 @@ const TextFileStreamingExample = () => {
     </div>
   );
 };
-
 
 // --- Histórias Exportadas ---
 

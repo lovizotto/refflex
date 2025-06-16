@@ -1,49 +1,92 @@
-// components/Rf/Store.tsx
-import React, { createContext, useContext, useReducer, useMemo, JSX } from 'react';
-import { createSignal } from '../core/createSignal';
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useMemo,
+  ReactNode,
+} from "react";
+import { Signal } from "../core/signals";
+import { useSignal, useComputed } from "../hooks/useSignal";
 
-const StoreContext = createContext<any>(null);
+// Define the shape of the context value.
+interface StoreContextValue<State, Action> {
+  dispatch: React.Dispatch<Action>;
+  stateSignal: Signal<State>;
+}
 
-export function Store({ reducer, initialState, children }: {
-  reducer: (state: any, action: any) => any,
-  initialState: any,
-  children: React.ReactNode
+// Create a generic, type-safe context.
+const StoreContext = createContext<StoreContextValue<any, any> | null>(null);
+
+/**
+ * Provides a Redux-like store to the component tree. State updates are managed
+ * by a standard reducer, and the state is exposed as a reactive signal tree.
+ */
+export function StoreProvider<State, Action>({
+  reducer,
+  initialState,
+  children,
+}: {
+  reducer: React.Reducer<State, Action>;
+  initialState: State;
+  children: ReactNode;
 }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  const signals = useMemo(() => {
-    return Object.keys(initialState).reduce((acc, key) => {
-      const [get, set] = createSignal(state[key]);
-      acc[key] = [get, set];
-      return acc;
-    }, {} as Record<string, ReturnType<typeof createSignal>>);
-  }, []);
+  // A single signal holds the entire state tree. `useSignal` ensures it's created only once.
+  const stateSignal = useSignal(initialState);
 
-  useMemo(() => {
-    for (const key in signals) {
-      signals[key]?.[1](state[key]);
-    }
-  }, [state]);
+  // When the reducer's state changes (after a dispatch), update the master signal.
+  // This happens in a single, atomic update, which is highly efficient.
+  React.useEffect(() => {
+    stateSignal.set(state);
+  }, [state, stateSignal]);
+
+  // The context value is memoized for performance.
+  const contextValue = useMemo(
+    () => ({
+      dispatch,
+      stateSignal,
+    }),
+    [dispatch, stateSignal],
+  );
 
   return (
-    <StoreContext.Provider value={{ dispatch, signals }}>
+    <StoreContext.Provider value={contextValue}>
       {children}
     </StoreContext.Provider>
   );
 }
 
-export function StoreValue({ storeKey, children }: {
-  storeKey: string,
-  children: (value: any) => JSX.Element
-}) {
-  const ctx = useContext(StoreContext);
-  const [get] = ctx.signals[storeKey];
-  return children(get());
+/**
+ * Custom hook to get the dispatch function from the nearest StoreProvider.
+ */
+export function useStoreDispatch<Action>() {
+  const context = useContext(StoreContext);
+  if (!context) {
+    throw new Error("useStoreDispatch must be used within a StoreProvider");
+  }
+  return context.dispatch as React.Dispatch<Action>;
 }
 
-export function Dispatch({ children }: {
-  children: (dispatch: (action: any) => void) => JSX.Element
-}) {
-  const ctx = useContext(StoreContext);
-  return children(ctx.dispatch);
+/**
+ * Custom hook to select a slice of the store's state.
+ * It returns a memoized, computed signal for the selected state, ensuring
+ * components only re-render when the specific data they depend on changes.
+ *
+ * @param selector A function that takes the full state and returns a slice of it.
+ * @returns A read-only signal containing the selected state.
+ */
+export function useStoreSelector<State, Selected>(
+  selector: (state: State) => Selected,
+): Signal<Selected> {
+  const context = useContext(StoreContext);
+  if (!context) {
+    throw new Error("useStoreSelector must be used within a StoreProvider");
+  }
+
+  // `useComputed` creates an efficient, derived signal that only updates
+  // when the result of the selector function changes.
+  const selectedSignal = useComputed(() => selector(context.stateSignal.get()));
+
+  return selectedSignal;
 }

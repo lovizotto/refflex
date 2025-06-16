@@ -1,91 +1,106 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
-import { ViewState, State } from './ViewState';
-import { useState } from 'react';
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import React, { useState } from "react";
+import { ViewState, State } from "../components/ViewState";
+import { useSignal, useSelector, useComputed } from "../hooks/useSignal";
+import { S } from "../components/S";
+import { BindInput } from "../components/BindInput";
 
 const meta = {
-  title: 'Components/ViewState',
+  title: "Components/ViewState",
   component: ViewState,
   parameters: {
-    layout: 'centered',
+    layout: "centered",
+    docs: {
+      description: {
+        component: `
+The ViewState component provides a declarative way to render different UI based on a state value.
+It's optimized to react to signals, preventing parent re-renders, but is also fully compatible with standard React state.
+
+### Key Features
+- **Declarative:** Replaces complex ternary operators or \`if/else\` blocks in your JSX.
+- **State-Driven:** Cleanly maps a state value (e.g., 'loading', 'success', 'error') to a specific UI.
+- **Signal-Optimized:** When passed a signal, only the \`ViewState\` component re-renders on change, not its parent.
+
+### Basic Usage
+\`\`\`tsx
+import { ViewState, State } from './ViewState';
+import { useSignal } from '../hooks/useSignal';
+
+const MyComponent = () => {
+  const currentView = useSignal('profile'); // 'profile' | 'settings'
+
+  return (
+    <ViewState state={currentView}>
+      <State name="profile">
+        <ProfilePage />
+      </State>
+      <State name="settings">
+        <SettingsPage />
+      </State>
+    </ViewState>
+  );
+};
+\`\`\`
+        `,
+      },
+    },
   },
-  tags: ['autodocs'],
+  tags: ["autodocs"],
 } satisfies Meta<typeof ViewState>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Basic example of ViewState with simple state switching
+// --- Basic Example ---
 const BasicExample = () => {
-  const [currentState, setCurrentState] = useState('welcome');
-  
+  const view = useSignal("welcome");
+
+  const NavButton = ({ name }: { name: string }) => {
+    const isActive = useSelector(() => view.get() === name);
+    return (
+      <button
+        onClick={() => view.set(name)}
+        className={`px-4 py-2 rounded-md font-semibold transition-colors ${isActive ? "bg-blue-500 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+      >
+        {name.charAt(0).toUpperCase() + name.slice(1)}
+      </button>
+    );
+  };
+
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px', width: '500px' }}>
-      <h3>Basic ViewState Example</h3>
-      <p>Current state: <strong>{currentState}</strong></p>
-      
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        <button 
-          onClick={() => setCurrentState('welcome')}
-          style={{ 
-            padding: '8px 16px',
-            backgroundColor: currentState === 'welcome' ? '#1890ff' : '#f0f0f0',
-            color: currentState === 'welcome' ? 'white' : 'black',
-            border: 'none',
-            borderRadius: '4px'
-          }}
-        >
-          Welcome
-        </button>
-        <button 
-          onClick={() => setCurrentState('about')}
-          style={{ 
-            padding: '8px 16px',
-            backgroundColor: currentState === 'about' ? '#1890ff' : '#f0f0f0',
-            color: currentState === 'about' ? 'white' : 'black',
-            border: 'none',
-            borderRadius: '4px'
-          }}
-        >
-          About
-        </button>
-        <button 
-          onClick={() => setCurrentState('contact')}
-          style={{ 
-            padding: '8px 16px',
-            backgroundColor: currentState === 'contact' ? '#1890ff' : '#f0f0f0',
-            color: currentState === 'contact' ? 'white' : 'black',
-            border: 'none',
-            borderRadius: '4px'
-          }}
-        >
-          Contact
-        </button>
+    <div className="p-5 border rounded-lg w-[500px]">
+      <h3 className="text-xl font-bold mb-2">Basic ViewState</h3>
+      <p className="text-sm text-gray-600 mb-4">
+        Current state:{" "}
+        <strong className="font-mono">
+          <S>{view}</S>
+        </strong>
+      </p>
+
+      <div className="flex gap-2 mb-5">
+        <NavButton name="welcome" />
+        <NavButton name="about" />
+        <NavButton name="contact" />
       </div>
-      
-      <div style={{ 
-        padding: '20px', 
-        backgroundColor: '#f9f9f9', 
-        borderRadius: '4px',
-        minHeight: '200px'
-      }}>
-        <ViewState state={() => currentState}>
+
+      <div className="p-5 bg-gray-50 rounded-lg min-h-[150px]">
+        <ViewState state={view}>
           <State name="welcome">
-            <div>
-              <h2>Welcome!</h2>
-              <p>This is the welcome screen. Click the buttons above to navigate to different states.</p>
-            </div>
+            <h4 className="font-bold text-lg">Welcome!</h4>
+            <p>This is the welcome screen. Click the buttons to navigate.</p>
           </State>
           <State name="about">
-            <div>
-              <h2>About Us</h2>
-              <p>This is the about screen. The ViewState component allows you to show different content based on the current state.</p>
-            </div>
+            <h4 className="font-bold text-lg">About Us</h4>
+            <p>
+              This screen demonstrates how ViewState shows different content.
+            </p>
           </State>
           <State name="contact">
-            <div>
-              <h2>Contact Us</h2>
-              <p>This is the contact screen. You can use ViewState to implement multi-state UIs without complex conditional rendering.</p>
-            </div>
+            <h4 className="font-bold text-lg">Contact Us</h4>
+            <p>
+              Use ViewState for multi-state UIs without complex conditional
+              rendering.
+            </p>
           </State>
         </ViewState>
       </div>
@@ -93,430 +108,148 @@ const BasicExample = () => {
   );
 };
 
-// Multi-step form example
+// --- Multi-Step Form Example ---
 const MultiStepFormExample = () => {
-  const [formState, setFormState] = useState('personal');
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    address: '',
-    city: '',
-    zipCode: '',
-    cardNumber: '',
-    cardName: '',
-    cardExpiry: '',
-    cardCvv: ''
+  const formStep = useSignal("personal");
+  const formData = useSignal({
+    firstName: "",
+    lastName: "",
+    email: "",
+    address: "",
   });
-  
-  const updateFormData = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-  
-  const goToNext = () => {
-    if (formState === 'personal') setFormState('address');
-    else if (formState === 'address') setFormState('payment');
-    else if (formState === 'payment') setFormState('confirmation');
-  };
-  
-  const goToPrevious = () => {
-    if (formState === 'address') setFormState('personal');
-    else if (formState === 'payment') setFormState('address');
-    else if (formState === 'confirmation') setFormState('payment');
-  };
-  
-  const resetForm = () => {
-    setFormState('personal');
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      address: '',
-      city: '',
-      zipCode: '',
-      cardNumber: '',
-      cardName: '',
-      cardExpiry: '',
-      cardCvv: ''
-    });
-  };
-  
-  const inputStyle = {
-    width: '100%',
-    padding: '8px',
-    marginBottom: '10px',
-    borderRadius: '4px',
-    border: '1px solid #ccc'
-  };
-  
-  const buttonStyle = {
-    padding: '8px 16px',
-    backgroundColor: '#1890ff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    marginRight: '10px'
-  };
-  
-  const secondaryButtonStyle = {
-    ...buttonStyle,
-    backgroundColor: '#f0f0f0',
-    color: 'black'
-  };
-  
-  return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px', width: '600px' }}>
-      <h3>Multi-Step Form Example</h3>
-      
-      <div style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', marginBottom: '10px' }}>
-          <div style={{ 
-            flex: 1, 
-            padding: '10px', 
-            backgroundColor: formState === 'personal' ? '#1890ff' : (
-              ['address', 'payment', 'confirmation'].includes(formState) ? '#52c41a' : '#f0f0f0'
-            ),
-            color: formState === 'personal' || ['address', 'payment', 'confirmation'].includes(formState) ? 'white' : 'black',
-            textAlign: 'center',
-            borderTopLeftRadius: '4px',
-            borderBottomLeftRadius: '4px'
-          }}>
-            Personal Info
-          </div>
-          <div style={{ 
-            flex: 1, 
-            padding: '10px', 
-            backgroundColor: formState === 'address' ? '#1890ff' : (
-              ['payment', 'confirmation'].includes(formState) ? '#52c41a' : '#f0f0f0'
-            ),
-            color: formState === 'address' || ['payment', 'confirmation'].includes(formState) ? 'white' : 'black',
-            textAlign: 'center'
-          }}>
-            Address
-          </div>
-          <div style={{ 
-            flex: 1, 
-            padding: '10px', 
-            backgroundColor: formState === 'payment' ? '#1890ff' : (
-              ['confirmation'].includes(formState) ? '#52c41a' : '#f0f0f0'
-            ),
-            color: formState === 'payment' || ['confirmation'].includes(formState) ? 'white' : 'black',
-            textAlign: 'center'
-          }}>
-            Payment
-          </div>
-          <div style={{ 
-            flex: 1, 
-            padding: '10px', 
-            backgroundColor: formState === 'confirmation' ? '#1890ff' : '#f0f0f0',
-            color: formState === 'confirmation' ? 'white' : 'black',
-            textAlign: 'center',
-            borderTopRightRadius: '4px',
-            borderBottomRightRadius: '4px'
-          }}>
-            Confirmation
-          </div>
-        </div>
-      </div>
-      
-      <div style={{ 
-        padding: '20px', 
-        backgroundColor: '#f9f9f9', 
-        borderRadius: '4px',
-        minHeight: '300px'
-      }}>
-        <ViewState state={() => formState}>
-          <State name="personal">
-            <h4>Personal Information</h4>
-            <div>
-              <label>First Name</label>
-              <input 
-                type="text" 
-                value={formData.firstName} 
-                onChange={(e) => updateFormData('firstName', e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-            <div>
-              <label>Last Name</label>
-              <input 
-                type="text" 
-                value={formData.lastName} 
-                onChange={(e) => updateFormData('lastName', e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-            <div>
-              <label>Email</label>
-              <input 
-                type="email" 
-                value={formData.email} 
-                onChange={(e) => updateFormData('email', e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-            <div style={{ marginTop: '20px' }}>
-              <button onClick={goToNext} style={buttonStyle}>Next</button>
-            </div>
-          </State>
-          
-          <State name="address">
-            <h4>Address Information</h4>
-            <div>
-              <label>Street Address</label>
-              <input 
-                type="text" 
-                value={formData.address} 
-                onChange={(e) => updateFormData('address', e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-            <div>
-              <label>City</label>
-              <input 
-                type="text" 
-                value={formData.city} 
-                onChange={(e) => updateFormData('city', e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-            <div>
-              <label>Zip Code</label>
-              <input 
-                type="text" 
-                value={formData.zipCode} 
-                onChange={(e) => updateFormData('zipCode', e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-            <div style={{ marginTop: '20px' }}>
-              <button onClick={goToPrevious} style={secondaryButtonStyle}>Previous</button>
-              <button onClick={goToNext} style={buttonStyle}>Next</button>
-            </div>
-          </State>
-          
-          <State name="payment">
-            <h4>Payment Information</h4>
-            <div>
-              <label>Card Number</label>
-              <input 
-                type="text" 
-                value={formData.cardNumber} 
-                onChange={(e) => updateFormData('cardNumber', e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-            <div>
-              <label>Name on Card</label>
-              <input 
-                type="text" 
-                value={formData.cardName} 
-                onChange={(e) => updateFormData('cardName', e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <div style={{ flex: 1 }}>
-                <label>Expiry Date</label>
-                <input 
-                  type="text" 
-                  value={formData.cardExpiry} 
-                  onChange={(e) => updateFormData('cardExpiry', e.target.value)}
-                  placeholder="MM/YY"
-                  style={inputStyle}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label>CVV</label>
-                <input 
-                  type="text" 
-                  value={formData.cardCvv} 
-                  onChange={(e) => updateFormData('cardCvv', e.target.value)}
-                  style={inputStyle}
-                />
-              </div>
-            </div>
-            <div style={{ marginTop: '20px' }}>
-              <button onClick={goToPrevious} style={secondaryButtonStyle}>Previous</button>
-              <button onClick={goToNext} style={buttonStyle}>Submit</button>
-            </div>
-          </State>
-          
-          <State name="confirmation">
-            <div style={{ textAlign: 'center' }}>
-              <h4>Thank You!</h4>
-              <p>Your form has been submitted successfully.</p>
-              <div style={{ marginTop: '20px' }}>
-                <h5>Summary</h5>
-                <p><strong>Name:</strong> {formData.firstName} {formData.lastName}</p>
-                <p><strong>Email:</strong> {formData.email}</p>
-                <p><strong>Address:</strong> {formData.address}, {formData.city} {formData.zipCode}</p>
-                <p><strong>Payment:</strong> Card ending in {formData.cardNumber.slice(-4)}</p>
-              </div>
-              <button onClick={resetForm} style={{ ...buttonStyle, marginTop: '20px' }}>Start Over</button>
-            </div>
-          </State>
-        </ViewState>
-      </div>
-    </div>
-  );
-};
 
-// State machine example
-const StateMachineExample = () => {
-  const [machineState, setMachineState] = useState('idle');
-  const [count, setCount] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  
-  const startProcess = () => {
-    setMachineState('loading');
-    setError(null);
-    
-    // Simulate async process
-    setTimeout(() => {
-      // 20% chance of error
-      if (Math.random() < 0.2) {
-        setMachineState('error');
-        setError('Something went wrong during processing.');
-      } else {
-        setMachineState('success');
-        setCount(prev => prev + 1);
-      }
-    }, 2000);
-  };
-  
-  const reset = () => {
-    setMachineState('idle');
-    setError(null);
-  };
-  
-  return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px', width: '500px' }}>
-      <h3>State Machine Example</h3>
-      <p>This example shows how ViewState can be used to implement a simple state machine.</p>
-      
-      <div style={{ marginBottom: '20px' }}>
-        <p>Current state: <strong>{machineState}</strong></p>
-        <p>Process count: <strong>{count}</strong></p>
+  const StepIndicator = ({ name, step }: { name: string; step: number }) => {
+    const currentStepIndex = useSelector(() =>
+      ["personal", "address", "confirmation"].indexOf(formStep.get()),
+    );
+    const isActive = currentStepIndex === step;
+    const isCompleted = currentStepIndex > step;
+    return (
+      <div
+        className={`flex-1 p-2 text-center text-sm font-semibold rounded-md transition-colors
+            ${isActive ? "bg-blue-500 text-white" : ""}
+            ${isCompleted ? "bg-green-500 text-white" : ""}
+            ${!isActive && !isCompleted ? "bg-gray-200" : ""}
+        `}
+      >
+        {name}
       </div>
-      
-      <div style={{ 
-        padding: '20px', 
-        backgroundColor: '#f9f9f9', 
-        borderRadius: '4px',
-        minHeight: '200px'
-      }}>
-        <ViewState state={() => machineState}>
-          <State name="idle">
-            <div>
-              <h4>Ready to Start</h4>
-              <p>Click the button below to start the process.</p>
-              <button 
-                onClick={startProcess}
-                style={{ 
-                  padding: '8px 16px',
-                  backgroundColor: '#1890ff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px'
-                }}
+    );
+  };
+
+  return (
+    <div className="p-5 border rounded-lg w-[500px]">
+      <h3 className="text-xl font-bold mb-4">Multi-Step Form</h3>
+
+      <div className="flex gap-2 mb-5">
+        <StepIndicator
+          name="Personal"
+          step={0}
+        />
+        <StepIndicator
+          name="Address"
+          step={1}
+        />
+        <StepIndicator
+          name="Confirm"
+          step={2}
+        />
+      </div>
+
+      <div className="p-5 bg-gray-50 rounded-lg min-h-[250px]">
+        <ViewState
+          state={formStep}
+          fallback={<div>Invalid Step</div>}
+        >
+          <State name="personal">
+            <h4 className="font-bold mb-3">Personal Information</h4>
+            <div className="space-y-3">
+              <BindInput
+                signal={useComputed(() => formData.get().firstName)}
+                onChange={(e) =>
+                  formData.set({
+                    ...formData.peek(),
+                    firstName: e.target.value,
+                  })
+                }
+                placeholder="First Name"
+                className="p-2 border rounded w-full"
+              />
+              <BindInput
+                signal={useComputed(() => formData.get().lastName)}
+                onChange={(e) =>
+                  formData.set({ ...formData.peek(), lastName: e.target.value })
+                }
+                placeholder="Last Name"
+                className="p-2 border rounded w-full"
+              />
+            </div>
+            <button
+              onClick={() => formStep.set("address")}
+              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+            >
+              Next
+            </button>
+          </State>
+
+          <State name="address">
+            <h4 className="font-bold mb-3">Address</h4>
+            <div className="space-y-3">
+              <BindInput
+                signal={useComputed(() => formData.get().address)}
+                onChange={(e) =>
+                  formData.set({ ...formData.peek(), address: e.target.value })
+                }
+                placeholder="Street Address"
+                className="p-2 border rounded w-full"
+              />
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => formStep.set("personal")}
+                className="px-4 py-2 bg-gray-300 rounded"
               >
-                Start Process
+                Previous
+              </button>
+              <button
+                onClick={() => formStep.set("confirmation")}
+                className="px-4 py-2 bg-blue-500 text-white rounded"
+              >
+                Next
               </button>
             </div>
           </State>
-          
-          <State name="loading">
-            <div>
-              <h4>Processing...</h4>
-              <div style={{ 
-                width: '100%', 
-                height: '10px', 
-                backgroundColor: '#f0f0f0',
-                borderRadius: '5px',
-                overflow: 'hidden',
-                marginTop: '20px'
-              }}>
-                <div style={{ 
-                  width: '30%', 
-                  height: '100%', 
-                  backgroundColor: '#1890ff',
-                  borderRadius: '5px',
-                  animation: 'progress 2s infinite linear'
-                }} />
-              </div>
-              <p style={{ marginTop: '20px' }}>Please wait while we process your request...</p>
+
+          <State name="confirmation">
+            <h4 className="font-bold mb-3">Confirmation</h4>
+            <div className="text-sm space-y-1">
+              <p>
+                <strong>Name:</strong>{" "}
+                <S>
+                  {useComputed(
+                    () =>
+                      `${formData.get().firstName} ${formData.get().lastName}`,
+                  )}
+                </S>
+              </p>
+              <p>
+                <strong>Address:</strong>{" "}
+                <S>{useComputed(() => formData.get().address)}</S>
+              </p>
             </div>
-          </State>
-          
-          <State name="success">
-            <div>
-              <h4>Success!</h4>
-              <div style={{ 
-                padding: '20px', 
-                backgroundColor: '#f6ffed', 
-                border: '1px solid #b7eb8f',
-                borderRadius: '4px',
-                marginTop: '20px'
-              }}>
-                <p>The process completed successfully.</p>
-              </div>
-              <button 
-                onClick={reset}
-                style={{ 
-                  padding: '8px 16px',
-                  backgroundColor: '#52c41a',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  marginTop: '20px'
-                }}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => formStep.set("address")}
+                className="px-4 py-2 bg-gray-300 rounded"
               >
-                Reset
+                Previous
               </button>
-            </div>
-          </State>
-          
-          <State name="error">
-            <div>
-              <h4>Error</h4>
-              <div style={{ 
-                padding: '20px', 
-                backgroundColor: '#fff2f0', 
-                border: '1px solid #ffccc7',
-                borderRadius: '4px',
-                marginTop: '20px'
-              }}>
-                <p>{error || 'An unknown error occurred.'}</p>
-              </div>
-              <div style={{ marginTop: '20px' }}>
-                <button 
-                  onClick={startProcess}
-                  style={{ 
-                    padding: '8px 16px',
-                    backgroundColor: '#1890ff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    marginRight: '10px'
-                  }}
-                >
-                  Retry
-                </button>
-                <button 
-                  onClick={reset}
-                  style={{ 
-                    padding: '8px 16px',
-                    backgroundColor: '#f0f0f0',
-                    color: 'black',
-                    border: 'none',
-                    borderRadius: '4px'
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
+              <button
+                onClick={() => alert("Form Submitted!")}
+                className="px-4 py-2 bg-green-500 text-white rounded"
+              >
+                Submit
+              </button>
             </div>
           </State>
         </ViewState>
@@ -526,76 +259,13 @@ const StateMachineExample = () => {
 };
 
 export const Basic: Story = {
+  name: "Basic State Switching",
   render: () => <BasicExample />,
+  args: { state: "welcome", children: null },
 };
 
 export const MultiStepForm: Story = {
+  name: "Multi-Step Form with Signals",
   render: () => <MultiStepFormExample />,
-};
-
-export const StateMachine: Story = {
-  render: () => <StateMachineExample />,
-};
-
-export const WithDescription: Story = {
-  render: () => <BasicExample />,
-  parameters: {
-    docs: {
-      description: {
-        story: `
-The ViewState component is a helper for conditional rendering based on a state value, making it easy to implement multi-state UIs.
-
-\`\`\`tsx
-import { ViewState, State } from './components/ViewState';
-import { useState } from 'react';
-
-// Create state to track the current view
-const [currentView, setCurrentView] = useState('welcome');
-
-// Use ViewState to render different content based on the current state
-<ViewState state={() => currentView}>
-  <State name="welcome">
-    <h2>Welcome!</h2>
-    <p>This is the welcome screen.</p>
-    <button onClick={() => setCurrentView('details')}>
-      Show Details
-    </button>
-  </State>
-  
-  <State name="details">
-    <h2>Details</h2>
-    <p>This is the details screen.</p>
-    <button onClick={() => setCurrentView('welcome')}>
-      Back to Welcome
-    </button>
-  </State>
-</ViewState>
-\`\`\`
-
-The ViewState system consists of two components:
-
-1. \`ViewState\`: The parent component that takes two props:
-   - \`state\`: A function that returns a string representing the current state
-   - \`children\`: State components to render based on the current state
-
-2. \`State\`: A component that represents a specific state, taking two props:
-   - \`name\`: The name of the state this component represents
-   - \`children\`: The content to render when this state is active
-
-Benefits of using ViewState:
-- Cleaner code compared to multiple conditional renders
-- Easier to understand and maintain complex state-based UIs
-- Naturally maps to state machines and multi-step flows
-- Keeps related UI states grouped together
-
-Common use cases:
-- Multi-step forms and wizards
-- State machines
-- Tabs and navigation
-- Different application modes or views
-- Any UI that needs to show different content based on state
-        `,
-      },
-    },
-  },
+  args: { state: "personal", children: null },
 };

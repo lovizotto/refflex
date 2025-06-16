@@ -1,24 +1,62 @@
 /**
  * Storybook stories for the Action component.
- * 
- * This file demonstrates various use cases of the Action component:
- * - Basic usage with a single watched value
- * - Watching multiple values simultaneously
- * - Using the immediate flag to trigger on mount
- * 
- * Each example shows how to integrate Action with other components like Signal.
+ *
+ * This file demonstrates various use cases of the Action component, showcasing
+ * its integration with the modern signals library.
  */
 
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Action } from './Action';
-import { createSignal } from '../core/createSignal';
-import { Signal } from './Signal';
+import { Action } from "./Action";
+import { useSignal } from '../hooks/useSignal';
+import { S } from "./S";
+import { Loop } from "./Loop";
+import { BindInput } from "./BindInput"; // Assuming this exists
 
 const meta = {
   title: 'Components/Action',
   component: Action,
   parameters: {
     layout: 'centered',
+    docs: {
+      description: {
+        component: `
+The Action component is a declarative utility for creating side-effects that react to changes in state.
+It does not render any UI itself, but it provides a clean way to bind a function (an "action") to one or more signals.
+
+### When to Use
+- Triggering API calls when a filter signal changes.
+- Saving state to \`localStorage\` automatically.
+- Logging analytics events based on state transitions.
+
+### Basic Usage
+\`\`\`tsx
+import { Action } from './components/Action';
+import { useSignal } from '../hooks/useSignal';
+import { S } from './components/S';
+
+const MyComponent = () => {
+  const count = useSignal(0);
+
+  // This side-effect will run every time 'count' changes.
+  const logChange = (newValue) => {
+    console.log('Count changed to:', newValue);
+  };
+
+  return (
+    <div>
+      <p>Count: <S>{count}</S></p>
+      <button onClick={() => count.set(count.peek() + 1)}>
+        Increment
+      </button>
+
+      <Action watch={count} onTrigger={logChange} />
+    </div>
+  );
+};
+\`\`\`
+        `,
+      },
+    },
   },
   tags: ['autodocs'],
 } satisfies Meta<typeof Action>;
@@ -26,112 +64,79 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/**
- * Basic example of the Action component
- * 
- * This example demonstrates:
- * - Creating signals for state management (count and lastAction)
- * - Using the Action component to watch a single value (count)
- * - Updating another signal (lastAction) when the watched value changes
- * - Using the Signal component to display reactive values
- */
-const ActionExample = () => {
-  const [count, setCount] = createSignal(0);
-  const [lastAction, setLastAction] = createSignal('None');
+// --- Basic Example ---
+const BasicActionExample = () => {
+  const count = useSignal(0);
+  const lastAction = useSignal('None');
 
   return (
-    <div
-      style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}
-    >
-      <h3>Action Component Example</h3>
-      <Signal value={count}>{(value) => <p>Count: {value}</p>}</Signal>
-      <Signal value={lastAction}>
-        {(value) => <p>Last Action: {value}</p>}
-      </Signal>
+    <div className="p-5 border rounded-lg w-80">
+      <h3 className="text-lg font-bold mb-2">Basic Action</h3>
+      <div className="text-base mb-1">
+        Count: <strong className="font-mono"><S>{count}</S></strong>
+      </div>
+      <div className="text-sm text-gray-600 h-5">
+        Last Action: <span className="italic"><S>{lastAction}</S></span>
+      </div>
 
-      <button onClick={() => setCount(count() + 1)}>Increment Count</button>
+      <button
+        onClick={() => count.set(count.peek() + 1)}
+        className="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+      >
+        Increment Count
+      </button>
 
+      {/* The 'watch' prop receives the signal object directly */}
       <Action
-        watch={() => count()}
-        onTrigger={(value) => setLastAction(`Count changed to ${value}`)}
+        watch={count}
+        onTrigger={(value) => lastAction.set(`Count changed to ${value}`)}
       />
     </div>
   );
 };
 
-/**
- * Example of the Action component with multiple watched values
- * 
- * This example demonstrates:
- * - Watching multiple signals simultaneously (count and name)
- * - Receiving an array of values in the onTrigger callback
- * - Maintaining a log of changes using a signal array
- * - Using the Signal component to create reactive UI elements
- */
+// --- Multiple Watches Example ---
 const MultiWatchExample = () => {
-  const [count, setCount] = createSignal(0);
-  const [name, setName] = createSignal('');
-  const [log, setLog] = createSignal<string[]>([]);
+  const count = useSignal(0);
+  const name = useSignal('');
+  const log = useSignal<string[]>([]);
 
   const addLog = (message: string) => {
-    setLog((prev) => [message, ...prev].slice(0, 5));
+    log.set([message, ...log.peek()].slice(0, 5));
   };
 
   return (
-    <div
-      style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}
-    >
-      <h3>Multiple Watch Example</h3>
-
-      <div style={{ marginBottom: '10px' }}>
-        <Signal value={count}>
-          {(value) => (
-            <button onClick={() => setCount(count() + 1)}>
-              Count: {value}
-            </button>
-          )}
-        </Signal>
+    <div className="p-5 border rounded-lg w-96">
+      <h3 className="text-lg font-bold mb-2">Multiple Watches</h3>
+      <div className="flex gap-4 mb-2">
+        <button
+          onClick={() => count.set(count.peek() + 1)}
+          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Count: <S>{count}</S>
+        </button>
+        <BindInput
+          signal={name}
+          placeholder="Enter name"
+          className="p-1 border rounded"
+        />
       </div>
 
-      <div style={{ marginBottom: '10px' }}>
-        <Signal value={name}>
-          {(value) => (
-            <input
-              type="text"
-              value={value}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter name"
-            />
-          )}
-        </Signal>
+      <div className="mt-4">
+        <h4 className="text-sm font-semibold">Action Log:</h4>
+        <ul className="mt-1 p-2 bg-gray-50 rounded h-32 overflow-auto text-xs font-mono">
+          <Loop each={log}>
+            {(entry) => <li>{entry}</li>}
+          </Loop>
+        </ul>
       </div>
 
-      <div style={{ marginTop: '10px' }}>
-        <h4>Action Log:</h4>
-        <Signal value={log}>
-          {(logEntries) => (
-            <ul
-              style={{
-                maxHeight: '150px',
-                overflow: 'auto',
-                padding: '10px',
-                backgroundColor: '#f5f5f5',
-                borderRadius: '4px',
-              }}
-            >
-              {logEntries.map((entry, index) => (
-                <li key={index}>{entry}</li>
-              ))}
-            </ul>
-          )}
-        </Signal>
-      </div>
-
+      {/* 'watch' can take an array of signals */}
       <Action
-        watch={[() => count(), () => name()]}
+        watch={[count, name] as any}
         onTrigger={(values) => {
           if (Array.isArray(values)) {
-            addLog(`Values changed: Count=${values[0]}, Name="${values[1]}"`);
+            addLog(`Count=${values[0]}, Name="${values[1]}"`);
           }
         }}
       />
@@ -139,62 +144,39 @@ const MultiWatchExample = () => {
   );
 };
 
-/**
- * Example of the Action component with the immediate flag
- * 
- * This example demonstrates:
- * - Using the immediate flag to trigger the callback when the component mounts
- * - Tracking changes to a count signal
- * - Maintaining a log of actions including the initial mount trigger
- * - Showing how the Action component integrates with user interactions
- */
+// --- Immediate Trigger Example ---
 const ImmediateActionExample = () => {
-  const [count, setCount] = createSignal(0);
-  const [logs, setLogs] = createSignal<string[]>(['Component mounted']);
+  const count = useSignal(0);
+  const logs = useSignal<string[]>([]);
 
   const addLog = (message: string) => {
-    setLogs((prev) => [message, ...prev].slice(0, 5));
+    logs.set([message, ...logs.peek()].slice(0, 5));
   };
 
   return (
-    <div
-      style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}
-    >
-      <h3>Immediate Action Example</h3>
-      <Signal value={count}>{(value) => <p>Count: {value}</p>}</Signal>
+    <div className="p-5 border rounded-lg w-80">
+      <h3 className="text-lg font-bold mb-2">Immediate Action</h3>
+      <p>Count: <strong className="font-mono"><S>{count}</S></strong></p>
 
       <button
-        onClick={() => {
-          setCount(count() + 1);
-          addLog(`Button clicked: count set to ${count()}`);
-        }}
+        onClick={() => count.set(count.peek() + 1)}
+        className="my-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
       >
         Increment Count
       </button>
 
-      <div style={{ marginTop: '10px' }}>
-        <h4>Logs:</h4>
-        <Signal value={logs}>
-          {(logEntries) => (
-            <ul
-              style={{
-                maxHeight: '150px',
-                overflow: 'auto',
-                padding: '10px',
-                backgroundColor: '#f5f5f5',
-                borderRadius: '4px',
-              }}
-            >
-              {logEntries.map((entry, index) => (
-                <li key={index}>{entry}</li>
-              ))}
-            </ul>
-          )}
-        </Signal>
+      <div className="mt-2">
+        <h4 className="text-sm font-semibold">Logs:</h4>
+        <ul className="mt-1 p-2 bg-gray-50 rounded h-32 overflow-auto text-xs font-mono">
+          <Loop each={logs}>
+            {(entry) => <li>{entry}</li>}
+          </Loop>
+        </ul>
       </div>
 
+      {/* 'immediate' triggers the action on mount */}
       <Action
-        watch={() => count()}
+        watch={count}
         onTrigger={(value) => addLog(`Action triggered: count = ${value}`)}
         immediate={true}
       />
@@ -202,151 +184,33 @@ const ImmediateActionExample = () => {
   );
 };
 
-/**
- * Default story showcasing the basic usage of the Action component
- * with a single watched value.
- */
+
 export const Default: Story = {
-  render: () => <ActionExample />,
+  name: "Basic: Watching a Single Signal",
+  render: () => <BasicActionExample />,
+  args: {
+    // These args are placeholders to satisfy TypeScript's type inference.
+    // The render function above is what's actually displayed.
+    watch: [],
+    onTrigger: () => {},
+  },
 };
 
-/**
- * Story demonstrating how to watch multiple values simultaneously
- * and handle an array of values in the onTrigger callback.
- */
 export const MultipleWatches: Story = {
+  name: "Advanced: Watching Multiple Signals",
   render: () => <MultiWatchExample />,
+  args: {
+    watch: [],
+    onTrigger: () => {},
+  },
 };
 
-/**
- * Story showcasing the immediate flag which triggers the callback
- * as soon as the component mounts, not just when values change.
- */
 export const ImmediateAction: Story = {
+  name: "Option: Immediate Trigger",
   render: () => <ImmediateActionExample />,
-};
-
-/**
- * Story with comprehensive documentation about the Action component.
- * This includes detailed explanations, code examples, and usage guidelines.
- */
-export const WithDescription: Story = {
-  render: () => (
-    <div>
-      <ActionExample />
-      <div style={{ height: '20px' }} />
-      <MultiWatchExample />
-    </div>
-  ),
-  parameters: {
-    docs: {
-      description: {
-        story: `
-The Action component is a helper that watches for changes in values and triggers a callback when they change.
-
-\`\`\`tsx
-import { Action } from './components/Action';
-import { createSignal } from '../core/createSignal';
-import { Signal } from './Signal';
-
-// Complete example of using Action with createSignal
-const ActionExample = () => {
-  // Create signals to manage state
-  const [count, setCount] = createSignal(0);
-  const [lastAction, setLastAction] = createSignal('None');
-
-  return (
-    <div>
-      {/* Display the current count using Signal */}
-      <Signal value={count}>
-        {(value) => <p>Count: {value}</p>}
-      </Signal>
-
-      {/* Display the last action using Signal */}
-      <Signal value={lastAction}>
-        {(value) => <p>Last Action: {value}</p>}
-      </Signal>
-
-      {/* Button to increment count */}
-      <button onClick={() => setCount(count() + 1)}>
-        Increment Count
-      </button>
-
-      {/* Action component that watches for changes in count */}
-      <Action 
-        watch={() => count()}
-        onTrigger={(value) => setLastAction(\`Count changed to \${value}\`)}
-      />
-    </div>
-  );
-};
-
-// Example with multiple watches
-const MultiWatchExample = () => {
-  const [count, setCount] = createSignal(0);
-  const [name, setName] = createSignal('');
-
-  return (
-    <div>
-      <button onClick={() => setCount(count() + 1)}>
-        Count: {count()}
-      </button>
-
-      <input 
-        value={name()} 
-        onChange={(e) => setName(e.target.value)} 
-      />
-
-      {/* Watch multiple values */}
-      <Action 
-        watch={[() => count(), () => name()]}
-        onTrigger={(values) => {
-          if (Array.isArray(values)) {
-            console.log(\`Values changed: Count=\${values[0]}, Name="\${values[1]}"\`);
-          }
-        }}
-      />
-    </div>
-  );
-};
-
-// Example with immediate flag
-const ImmediateExample = () => {
-  const [count, setCount] = createSignal(0);
-
-  return (
-    <div>
-      <Signal value={count}>
-        {(value) => <p>Count: {value}</p>}
-      </Signal>
-
-      <button onClick={() => setCount(count() + 1)}>
-        Increment Count
-      </button>
-
-      {/* Trigger immediately on mount */}
-      <Action 
-        watch={() => count()}
-        onTrigger={(value) => console.log('Count value:', value)}
-        immediate={true}
-      />
-    </div>
-  );
-};
-\`\`\`
-
-The Action component takes three props:
-- \`watch\`: A function or array of functions that return values to watch
-- \`onTrigger\`: A callback function that is called when the watched values change
-- \`immediate\`: A boolean that determines whether the callback should be triggered immediately on mount (default: false)
-
-The component:
-- Watches for changes in the values returned by the watch function(s)
-- Calls the onTrigger callback with the new value(s) when changes occur
-- Can trigger the callback immediately on mount if immediate is true
-- Returns null (renders nothing)
-        `,
-      },
-    },
+  args: {
+    watch: [],
+    onTrigger: () => {},
+    immediate: true,
   },
 };

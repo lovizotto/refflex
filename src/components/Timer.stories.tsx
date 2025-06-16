@@ -1,133 +1,161 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Timer } from './Timer';
-import { useState } from 'react';
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import React from "react";
+import { useSignal, useComputed, useSignalValue } from "../hooks/useSignal";
+import { Timer } from "../components/Timer";
+import { S } from "../components/S";
+import { Loop } from "../components/Loop";
+import { Cond, When, Otherwise } from "../components/Cond";
 
 const meta = {
-  title: 'Components/Timer',
+  title: "Components/Timer",
   component: Timer,
   parameters: {
-    layout: 'centered',
+    layout: "centered",
+    docs: {
+      description: {
+        component: `
+The Timer is a declarative component for creating side-effects based on time.
+It's optimized to be controlled by signals but is also compatible with plain boolean props.
+It can be used for one-off timeouts or repeating intervals.
+
+### Key Features
+- **Declarative API:** Simply render the component to start a timer.
+- **Reactive Control:** Use a signal for the \`enabled\` prop to start and stop the timer reactively without re-rendering the parent.
+- **Versatile:** Supports both \`setTimeout\` (one-off) and \`setInterval\` (repeating) behavior.
+- **Side-Effect Focused:** Renders no UI itself, designed purely for triggering actions.
+        `,
+      },
+    },
   },
-  tags: ['autodocs'],
+  tags: ["autodocs"],
 } satisfies Meta<typeof Timer>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Example component that uses Timer with setTimeout
-const TimeoutExample = () => {
-  const [message, setMessage] = useState('Waiting for timeout...');
-  const [key, setKey] = useState(0);
-  
-  const resetTimer = () => {
-    setMessage('Waiting for timeout...');
-    setKey(prev => prev + 1);
+// --- Interactive Memory Game Example ---
+
+const SequenceMemoryGame = () => {
+  const tiles = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  const sequence = useSignal<number[]>([]);
+  const gameState = useSignal<"selecting" | "playback" | "finished">(
+    "selecting",
+  );
+
+  const isPlayback = useComputed(() => gameState.get() === "playback");
+
+  const handleTileClick = (index: number) => {
+    // Can only select tiles during the 'selecting' phase
+    if (gameState.peek() !== "selecting" || sequence.peek().includes(index)) {
+      return;
+    }
+
+    const newSequence = [...sequence.peek(), index];
+    sequence.set(newSequence);
+
+    // Start playback after 5 selections
+    if (newSequence.length === 5) {
+      gameState.set("playback");
+    }
   };
-  
+
+  const handlePlaybackTick = () => {
+    const currentSequence = sequence.peek();
+    if (currentSequence.length > 0) {
+      // Remove the last item from the sequence
+      sequence.set(currentSequence.slice(0, -1));
+    } else {
+      // When playback is done, finish the game
+      gameState.set("finished");
+    }
+  };
+
+  const handleReset = () => {
+    sequence.set([]);
+    gameState.set("selecting");
+  };
+
+  // --- Derived State and Values ---
+  // It's best practice to declare computed values before the return statement for readability.
+  const isSelecting = useSignalValue(
+    useComputed(() => gameState.get() === "selecting"),
+  );
+  const isPlaybackValue = useSignalValue(isPlayback);
+  const isFinished = useSignalValue(
+    useComputed(() => gameState.get() === "finished"),
+  );
+  const tilesRemaining = useSignalValue(
+    useComputed(() => 5 - sequence.get().length),
+  );
+  const isNotSelecting = useSignalValue(
+    useComputed(() => gameState.get() !== "selecting"),
+  );
+
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}>
-      <h3>Timeout Example (3 seconds)</h3>
-      <p>{message}</p>
-      <button onClick={resetTimer}>Reset Timer</button>
-      
-      <Timer 
-        key={key}
-        delay={3000} 
-        do={() => setMessage('Timeout completed!')} 
-        once={true} 
-        interval={false} 
+    <div className="p-5 border rounded-lg w-96 flex flex-col items-center">
+      <h3 className="text-lg font-bold mb-2">Sequence Memory Game</h3>
+
+      <div className="h-12 flex items-center justify-center">
+        <Cond>
+          <When is={isSelecting}>
+            <p className="text-sm text-gray-600">
+              Select {tilesRemaining} more tiles.
+            </p>
+          </When>
+          <When is={isPlaybackValue}>
+            <p className="text-sm text-blue-600 font-semibold">
+              Playing back sequence...
+            </p>
+          </When>
+          <When is={isFinished}>
+            <p className="text-sm text-green-600 font-semibold">Finished!</p>
+          </When>
+        </Cond>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <Loop each={tiles}>
+          {(tileIndex) => {
+            const isSelected = useComputed(() =>
+              sequence.get().includes(tileIndex),
+            );
+            return (
+              <button
+                onClick={() => handleTileClick(tileIndex)}
+                className={`w-16 h-16 rounded-md transition-all duration-300
+                  ${useSignalValue(isSelected) ? "bg-blue-500 scale-105" : "bg-gray-200 hover:bg-gray-300"}
+                  ${isNotSelecting ? "cursor-not-allowed" : ""}
+                `}
+              />
+            );
+          }}
+        </Loop>
+      </div>
+
+      <button
+        onClick={handleReset}
+        className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+      >
+        Reset
+      </button>
+
+      {/* The Timer component drives the playback logic */}
+      <Timer
+        delay={500}
+        interval={true}
+        enabled={isPlayback}
+        do={handlePlaybackTick}
       />
     </div>
   );
 };
 
-// Example component that uses Timer with setInterval
-const IntervalExample = () => {
-  const [count, setCount] = useState(0);
-  const [isRunning, setIsRunning] = useState(true);
-  
-  const toggleInterval = () => {
-    setIsRunning(prev => !prev);
-  };
-  
-  const resetCounter = () => {
-    setCount(0);
-  };
-  
-  return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}>
-      <h3>Interval Example (1 second)</h3>
-      <p>Count: {count}</p>
-      <button onClick={toggleInterval}>{isRunning ? 'Pause' : 'Resume'}</button>
-      <button onClick={resetCounter}>Reset Counter</button>
-      
-      {isRunning && (
-        <Timer 
-          delay={1000} 
-          do={() => setCount(prev => prev + 1)} 
-          once={false} 
-          interval={true} 
-        />
-      )}
-    </div>
-  );
-};
-
-export const Timeout: Story = {
-  render: () => <TimeoutExample />,
-};
-
-export const Interval: Story = {
-  render: () => <IntervalExample />,
-};
-
-export const WithDescription: Story = {
-  render: () => (
-    <div>
-      <TimeoutExample />
-      <div style={{ height: '20px' }} />
-      <IntervalExample />
-    </div>
-  ),
-  parameters: {
-    docs: {
-      description: {
-        story: `
-The Timer component is a helper that sets up either a setTimeout or setInterval and calls a callback function.
-
-\`\`\`tsx
-import { Timer } from './components/Timer';
-
-// Use as a timeout (runs once)
-<Timer 
-  delay={3000} 
-  do={() => console.log('3 seconds passed!')} 
-  once={true} 
-  interval={false} 
-/>
-
-// Use as an interval (runs repeatedly)
-<Timer 
-  delay={1000} 
-  do={() => console.log('Every second')} 
-  once={false} 
-  interval={true} 
-/>
-\`\`\`
-
-The Timer component takes these props:
-- \`delay\`: The time in milliseconds before the callback is executed
-- \`do\`: The callback function to execute
-- \`once\`: Whether to run only once (default: true)
-- \`interval\`: Whether to use setInterval instead of setTimeout (default: false)
-
-The component:
-- Sets up either a setTimeout or setInterval based on the interval prop
-- Calls the action after the specified delay
-- Cleans up the timeout/interval on unmount
-- Renders nothing (returns null)
-        `,
-      },
-    },
+export const InteractiveGame: Story = {
+  name: "Interactive Game Example",
+  render: () => <SequenceMemoryGame />,
+  args: {
+    // Args are placeholders to satisfy Storybook's type system for the component.
+    delay: 1000,
+    do: () => {},
   },
 };

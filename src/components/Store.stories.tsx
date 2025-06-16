@@ -1,252 +1,353 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Store, StoreValue, Dispatch } from './Store';
-import { useState } from 'react';
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import React, { useState } from "react";
+
+import { S } from "../components/S";
+import { Loop } from "../components/Loop";
+import { Action } from "../components/Action";
+import { Cond, When, Otherwise } from "../components/Cond";
+import { useSignalValue } from "../hooks/useSignal";
+import { StoreProvider, useStoreDispatch, useStoreSelector } from "./Store";
 
 const meta = {
-  title: 'Components/Store',
-  component: Store,
+  title: "Components/StoreProvider",
+  component: StoreProvider,
   parameters: {
-    layout: 'centered',
-  },
-  tags: ['autodocs'],
-} satisfies Meta<typeof Store>;
-
-export default meta;
-type Story = StoryObj<typeof meta>;
-
-// Simple counter reducer
-const counterReducer = (state: { count: number }, action: { type: string }) => {
-  switch (action.type) {
-    case 'INCREMENT':
-      return { ...state, count: state.count + 1 };
-    case 'DECREMENT':
-      return { ...state, count: state.count - 1 };
-    case 'RESET':
-      return { ...state, count: 0 };
-    default:
-      return state;
-  }
-};
-
-// Example component that uses Store with a simple counter
-const BasicStoreExample = () => {
-  return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}>
-      <h3>Basic Store Example</h3>
-
-      <Store reducer={counterReducer} initialState={{ count: 0 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <StoreValue key="count-value" storeKey="count">
-            {(count) => <p>Current count: {count}</p>}
-          </StoreValue>
-
-          <Dispatch>
-            {(dispatch) => (
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => dispatch({ type: 'INCREMENT' })}>Increment</button>
-                <button onClick={() => dispatch({ type: 'DECREMENT' })}>Decrement</button>
-                <button onClick={() => dispatch({ type: 'RESET' })}>Reset</button>
-              </div>
-            )}
-          </Dispatch>
-        </div>
-      </Store>
-    </div>
-  );
-};
-
-// More complex reducer with multiple state values
-const todoReducer = (
-  state: { todos: string[]; filter: string },
-  action: { type: string; payload?: any }
-) => {
-  switch (action.type) {
-    case 'ADD_TODO':
-      return { ...state, todos: [...state.todos, action.payload] };
-    case 'REMOVE_TODO':
-      return {
-        ...state,
-        todos: state.todos.filter((_, index) => index !== action.payload),
-      };
-    case 'SET_FILTER':
-      return { ...state, filter: action.payload };
-    default:
-      return state;
-  }
-};
-
-// Example component that uses Store with a todo list
-const TodoStoreExample = () => {
-  const [newTodo, setNewTodo] = useState('');
-
-  return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '4px' }}>
-      <h3>Todo List Example</h3>
-
-      <Store
-        reducer={todoReducer}
-        initialState={{ todos: ['Learn React', 'Learn Reflex'], filter: 'all' }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <Dispatch>
-            {(dispatch) => (
-              <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                <input
-                  type="text"
-                  value={newTodo}
-                  onChange={(e) => setNewTodo(e.target.value)}
-                  placeholder="Add new todo"
-                />
-                <button
-                  onClick={() => {
-                    if (newTodo.trim()) {
-                      dispatch({ type: 'ADD_TODO', payload: newTodo });
-                      setNewTodo('');
-                    }
-                  }}
-                >
-                  Add
-                </button>
-              </div>
-            )}
-          </Dispatch>
-
-          <div style={{ marginBottom: '10px' }}>
-            <StoreValue key="filter-value" storeKey="filter">
-              {(filter) => (
-                <Dispatch>
-                  {(dispatch) => (
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button
-                        style={{ fontWeight: filter === 'all' ? 'bold' : 'normal' }}
-                        onClick={() => dispatch({ type: 'SET_FILTER', payload: 'all' })}
-                      >
-                        All
-                      </button>
-                      <button
-                        style={{ fontWeight: filter === 'active' ? 'bold' : 'normal' }}
-                        onClick={() => dispatch({ type: 'SET_FILTER', payload: 'active' })}
-                      >
-                        Active
-                      </button>
-                    </div>
-                  )}
-                </Dispatch>
-              )}
-            </StoreValue>
-          </div>
-
-          <StoreValue key="todos-value" storeKey="todos">
-            {(todos) => (
-              <StoreValue key="nested-filter-value" storeKey="filter">
-                {(filter) => (
-                  <Dispatch>
-                    {(dispatch) => (
-                      <ul style={{ listStyleType: 'none', padding: 0 }}>
-                        {todos.map((todo, index) => (
-                          <li
-                            key={index}
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              padding: '5px 0',
-                              borderBottom: '1px solid #eee',
-                            }}
-                          >
-                            <span>{todo}</span>
-                            <button
-                              onClick={() => dispatch({ type: 'REMOVE_TODO', payload: index })}
-                            >
-                              Remove
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </Dispatch>
-                )}
-              </StoreValue>
-            )}
-          </StoreValue>
-        </div>
-      </Store>
-    </div>
-  );
-};
-
-export const Basic: Story = {
-  render: () => <BasicStoreExample />,
-};
-
-export const TodoList: Story = {
-  render: () => <TodoStoreExample />,
-};
-
-export const WithDescription: Story = {
-  render: () => (
-    <div>
-      <BasicStoreExample />
-      <div style={{ height: '20px' }} />
-      <TodoStoreExample />
-    </div>
-  ),
-  parameters: {
+    layout: "centered",
     docs: {
       description: {
-        story: `
-The Store component provides a simple state management solution using React's Context API and useReducer hook.
+        component: `
+The StoreProvider is a Redux-like state management solution that integrates seamlessly with the signals library.
+It uses a standard React reducer for state logic and exposes the state as a reactive signal.
+
+### Key Features
+- **Centralized Logic:** Uses a familiar reducer pattern for predictable state updates.
+- **Reactive Subscriptions:** Components subscribe to slices of state using the \`useStoreSelector\` hook, which returns a computed signal. This ensures components only re-render when the specific data they need changes.
+- **Decoupled Dispatch:** The \`useStoreDispatch\` hook provides access to the dispatch function without causing re-renders.
+
+### Advanced Patterns
+
+#### Persistence with localStorage
+You can achieve persistence by initializing state from localStorage and using the \`<Action />\` component to write back any changes.
 
 \`\`\`tsx
-import { Store, StoreValue, Dispatch } from './components/Store';
+const settingsState = useStoreSelector(state => state.settings);
+// This action runs whenever the settings state changes.
+<Action watch={settingsState} onTrigger={(newState) => {
+  localStorage.setItem('app-settings', JSON.stringify(newState));
+}} />
+\`\`\`
 
-// Define a reducer function
-const counterReducer = (state, action) => {
-  switch (action.type) {
-    case 'INCREMENT':
-      return { ...state, count: state.count + 1 };
-    case 'DECREMENT':
-      return { ...state, count: state.count - 1 };
-    default:
-      return state;
+#### Async Actions (Thunks)
+Create functions that orchestrate async operations and dispatch actions.
+
+\`\`\`tsx
+const fetchUser = (id) => async (dispatch) => {
+  dispatch({ type: 'USER_FETCH_START' });
+  try {
+    const user = await api.fetchUser(id);
+    dispatch({ type: 'USER_FETCH_SUCCESS', payload: user });
+  } catch (error) {
+    dispatch({ type: 'USER_FETCH_ERROR', payload: error.message });
   }
 };
 
-// Use the Store component
-<Store reducer={counterReducer} initialState={{ count: 0 }}>
-  {/* Access state values with StoreValue */}
-  <StoreValue key="count-value" storeKey="count">
-    {(count) => <p>Current count: {count}</p>}
-  </StoreValue>
-
-  {/* Dispatch actions with Dispatch */}
-  <Dispatch>
-    {(dispatch) => (
-      <div>
-        <button onClick={() => dispatch({ type: 'INCREMENT' })}>Increment</button>
-        <button onClick={() => dispatch({ type: 'DECREMENT' })}>Decrement</button>
-      </div>
-    )}
-  </Dispatch>
-</Store>
+// In your component:
+const dispatch = useStoreDispatch();
+<button onClick={() => fetchUser(1)(dispatch)}>Fetch User</button>
 \`\`\`
-
-The Store component consists of three main parts:
-
-1. **Store**: The main component that creates a context provider with a reducer and initialState.
-   - \`reducer\`: A function that takes the current state and an action, and returns the new state.
-   - \`initialState\`: The initial state object.
-   - \`children\`: The components that will have access to the store.
-
-2. **StoreValue**: A component to access and render values from the store.
-   - \`storeKey\`: The key of the state value to access.
-   - \`children\`: A render function that receives the value.
-
-3. **Dispatch**: A component to access and use the dispatch function.
-   - \`children\`: A render function that receives the dispatch function.
-
-The Store component creates signals for each state property, allowing for efficient updates when only specific parts of the state change.
         `,
       },
     },
   },
+  tags: ["autodocs"],
+} satisfies Meta<typeof StoreProvider>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+// --- Basic Counter Example ---
+
+type CounterState = { count: number };
+type CounterAction = { type: "INCREMENT" | "DECREMENT" | "RESET" };
+
+const counterReducer = (
+  state: CounterState,
+  action: CounterAction,
+): CounterState => {
+  switch (action.type) {
+    case "INCREMENT":
+      return { count: state.count + 1 };
+    case "DECREMENT":
+      return { count: state.count - 1 };
+    case "RESET":
+      return { count: 0 };
+    default:
+      return state;
+  }
+};
+
+const CounterDisplay = () => {
+  const count = useStoreSelector((state: CounterState) => state.count);
+  return (
+    <p className="text-2xl font-mono">
+      Count: <S>{count}</S>
+    </p>
+  );
+};
+
+const CounterControls = () => {
+  const dispatch = useStoreDispatch<CounterAction>();
+  return (
+    <div className="flex gap-2 mt-4">
+      <button
+        className="px-3 py-1 bg-blue-500 text-white rounded"
+        onClick={() => dispatch({ type: "INCREMENT" })}
+      >
+        +
+      </button>
+      <button
+        className="px-3 py-1 bg-blue-500 text-white rounded"
+        onClick={() => dispatch({ type: "DECREMENT" })}
+      >
+        -
+      </button>
+      <button
+        className="px-3 py-1 bg-gray-500 text-white rounded"
+        onClick={() => dispatch({ type: "RESET" })}
+      >
+        Reset
+      </button>
+    </div>
+  );
+};
+
+const BasicStoreExample = () => (
+  <div className="p-5 border rounded-lg w-80 text-center">
+    <h3 className="text-lg font-bold mb-2">Counter</h3>
+    <StoreProvider
+      reducer={counterReducer}
+      initialState={{ count: 0 }}
+    >
+      <CounterDisplay />
+      <CounterControls />
+    </StoreProvider>
+  </div>
+);
+
+// --- Persistence Example ---
+
+type SettingsState = { theme: "light" | "dark"; notifications: boolean };
+type SettingsAction =
+  | { type: "SET_THEME"; payload: "light" | "dark" }
+  | { type: "TOGGLE_NOTIFICATIONS" };
+
+const settingsReducer = (
+  state: SettingsState,
+  action: SettingsAction,
+): SettingsState => {
+  switch (action.type) {
+    case "SET_THEME":
+      return { ...state, theme: action.payload };
+    case "TOGGLE_NOTIFICATIONS":
+      return { ...state, notifications: !state.notifications };
+    default:
+      return state;
+  }
+};
+
+const getInitialSettings = (): SettingsState => {
+  try {
+    const saved = localStorage.getItem("app-settings");
+    return saved ? JSON.parse(saved) : { theme: "light", notifications: true };
+  } catch {
+    return { theme: "light", notifications: true };
+  }
+};
+
+const SettingsManager = () => {
+  const settings = useStoreSelector((state: SettingsState) => state);
+  const theme = useStoreSelector((s: SettingsState) => s.theme);
+  const notifications = useStoreSelector((s: SettingsState) =>
+    s.notifications.toString(),
+  );
+  return (
+    <>
+      <div className="font-mono text-xs bg-gray-100 p-2 rounded">
+        Theme: <S>{theme}</S>
+        <br />
+        Notifications: <S>{notifications}</S>
+      </div>
+      {/* This action declaratively persists state changes to localStorage */}
+      <Action
+        watch={settings}
+        onTrigger={(newState) => {
+          console.log("Saving to localStorage:", newState);
+          localStorage.setItem("app-settings", JSON.stringify(newState));
+        }}
+      />
+    </>
+  );
+};
+
+const SettingsControls = () => {
+  const dispatch = useStoreDispatch<SettingsAction>();
+  return (
+    <div className="flex flex-col gap-2 mt-4">
+      <button
+        className="px-3 py-1 bg-blue-500 text-white rounded"
+        onClick={() => dispatch({ type: "SET_THEME", payload: "dark" })}
+      >
+        Set Dark Theme
+      </button>
+      <button
+        className="px-3 py-1 bg-blue-500 text-white rounded"
+        onClick={() => dispatch({ type: "SET_THEME", payload: "light" })}
+      >
+        Set Light Theme
+      </button>
+      <button
+        className="px-3 py-1 bg-blue-500 text-white rounded"
+        onClick={() => dispatch({ type: "TOGGLE_NOTIFICATIONS" })}
+      >
+        Toggle Notifications
+      </button>
+    </div>
+  );
+};
+
+const PersistenceExample = () => (
+  <div className="p-5 border rounded-lg w-80 text-center">
+    <h3 className="text-lg font-bold mb-2">Settings (with Persistence)</h3>
+    <p className="text-xs text-gray-500 mb-2">
+      Changes are saved to localStorage. Try reloading the page.
+    </p>
+    <StoreProvider
+      reducer={settingsReducer}
+      initialState={getInitialSettings()}
+    >
+      <SettingsManager />
+      <SettingsControls />
+    </StoreProvider>
+  </div>
+);
+
+// --- Async (Thunk) Example ---
+
+type UserState = {
+  loading: boolean;
+  data: { name: string } | null;
+  error: string | null;
+};
+type UserAction =
+  | { type: "FETCH_START" }
+  | { type: "FETCH_SUCCESS"; payload: { name: string } }
+  | { type: "FETCH_ERROR"; payload: string };
+
+const userReducer = (state: UserState, action: UserAction): UserState => {
+  switch (action.type) {
+    case "FETCH_START":
+      return { ...state, loading: true, error: null };
+    case "FETCH_SUCCESS":
+      return { loading: false, error: null, data: action.payload };
+    case "FETCH_ERROR":
+      return { ...state, loading: false, error: action.payload };
+    default:
+      return state;
+  }
+};
+
+const fetchUser =
+  (userId: number) => async (dispatch: React.Dispatch<UserAction>) => {
+    dispatch({ type: "FETCH_START" });
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (userId === 0) throw new Error("Invalid user ID");
+      const user = { name: `User #${userId}` };
+      dispatch({ type: "FETCH_SUCCESS", payload: user });
+    } catch (error: any) {
+      dispatch({ type: "FETCH_ERROR", payload: error.message });
+    }
+  };
+
+const UserDisplay = () => {
+  const state = useStoreSelector((state: UserState) => state);
+
+  return (
+    <div className="mt-4 h-20 flex items-center justify-center p-3 bg-gray-100 rounded">
+      <Cond>
+        <When
+          is={useSignalValue(useStoreSelector((s: UserState) => s.loading))}
+        >
+          <p>Loading...</p>
+        </When>
+        <When
+          is={!!useSignalValue(useStoreSelector((s: UserState) => s.error))}
+        >
+          <p className="text-red-500">
+            Error: <S>{useStoreSelector((s: UserState) => s.error)}</S>
+          </p>
+        </When>
+        <When is={!!useSignalValue(useStoreSelector((s: UserState) => s.data))}>
+          <p className="text-green-600">
+            Welcome, <S>{useStoreSelector((s: UserState) => s.data?.name)}</S>!
+          </p>
+        </When>
+        <Otherwise>
+          <p>Click a button to fetch user data.</p>
+        </Otherwise>
+      </Cond>
+    </div>
+  );
+};
+
+const AsyncExample = () => {
+  const dispatch = useStoreDispatch<UserAction>();
+  return (
+    <div className="p-5 border rounded-lg w-80 text-center">
+      <h3 className="text-lg font-bold mb-2">Async Data Fetch</h3>
+      <div className="flex gap-2">
+        <button
+          className="px-3 py-1 bg-green-500 text-white rounded w-full"
+          onClick={() => fetchUser(1)(dispatch)}
+        >
+          Fetch User 1
+        </button>
+        <button
+          className="px-3 py-1 bg-red-500 text-white rounded w-full"
+          onClick={() => fetchUser(0)(dispatch)}
+        >
+          Trigger Error
+        </button>
+      </div>
+      <UserDisplay />
+    </div>
+  );
+};
+
+const AsyncStoreExampleWrapper = () => (
+  <StoreProvider
+    reducer={userReducer}
+    initialState={{ loading: false, data: null, error: null }}
+  >
+    <AsyncExample />
+  </StoreProvider>
+);
+
+export const Basic: Story = {
+  name: "Basic Usage (Counter)",
+  render: () => <BasicStoreExample />,
+  args: { initialState: {}, reducer: () => ({}), children: null },
+};
+
+export const Persistence: Story = {
+  name: "Persistence (localStorage)",
+  render: () => <PersistenceExample />,
+  args: { initialState: {}, reducer: () => ({}), children: null },
+};
+
+export const Async: Story = {
+  name: "Async Actions (Thunk)",
+  render: () => <AsyncStoreExampleWrapper />,
+  args: { initialState: {}, reducer: () => ({}), children: null },
 };

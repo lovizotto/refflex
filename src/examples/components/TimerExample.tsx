@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSignal, useSignalValue } from '../../hooks/useSignal';
 import { S } from '../../components/S';
-import { Timer } from '../../components/Timer.tsx';
+import { Rf } from "../../Rf";
 
 const TimerExample = () => {
   const seconds = useSignal(0);
@@ -33,10 +33,10 @@ const TimerExample = () => {
       </div>
 
       <div className="text-2xl font-bold">
-        <S>{seconds}</S>s
+        <S>{seconds}</S>
       </div>
 
-      <Timer
+      <Rf.Timer
         delay={1000}
         interval={true}
         enabled={isRunning}

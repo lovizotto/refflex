@@ -1,4 +1,4 @@
-// WebSocket.stories.tsx
+// _WebSocket.stories.tsx
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import {
   OnClose,
