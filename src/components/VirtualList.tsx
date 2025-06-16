@@ -1,4 +1,3 @@
-// components/Rf/VirtualList.tsx
 import React, {
   forwardRef,
   useCallback,
@@ -6,31 +5,29 @@ import React, {
   useImperativeHandle,
   useRef,
   useState,
+  useMemo,
 } from 'react';
+import { Signal } from '../core/signals';
+import { useSignalValue } from '../hooks/useSignal';
 
-//
-// Fenwick Tree (BIT) para prefix sums dinâmicas
-//
+// Helper to check for a signal object
+function isSignal<T>(val: any): val is Signal<T> {
+  return typeof val === 'object' && val !== null && 'get' in val && 'subscribe' in val;
+}
+
+// Fenwick Tree (BIT) for dynamic prefix sums of item heights
 class Fenwick {
-  n: number;
   tree: number[];
-  constructor(n: number) {
-    this.n = n;
-    this.tree = Array(n + 1).fill(0);
+  constructor(size: number) {
+    this.tree = Array(size + 1).fill(0);
   }
-  // inicializa a estrutura com um array de alturas
-  init(arr: number[]) {
-    for (let i = 0; i < this.n; i++) {
-      this.update(i, arr[i]);
-    }
-  }
-  // adiciona `delta` na posição i
+
   update(i: number, delta: number) {
-    for (i += 1; i <= this.n; i += i & -i) {
+    for (i += 1; i < this.tree.length; i += i & -i) {
       this.tree[i] += delta;
     }
   }
-  // soma de [0..i]
+
   query(i: number): number {
     let s = 0;
     for (i += 1; i > 0; i -= i & -i) {
@@ -38,184 +35,155 @@ class Fenwick {
     }
     return s;
   }
-  // encontra o maior índice idx tal que query(idx) < value
-  // (procura o prefixo cujo total é menor que o scrollTop)
+
+  // Finds the first item whose cumulative height is >= value
   lowerBound(value: number): number {
     let idx = 0;
-    // maior potência de 2 ≤ n
-    let bit = 1 << (31 - Math.clz32(this.n));
+    let bit = 1 << (31 - Math.clz32(this.tree.length -1 || 1));
     while (bit > 0) {
       const next = idx + bit;
-      if (next <= this.n && this.tree[next] < value) {
+      if (next < this.tree.length && this.tree[next] < value) {
         value -= this.tree[next];
         idx = next;
       }
       bit >>= 1;
     }
-    return idx; // idx já é 1-based no tree, mas queremos 0-based
+    return idx;
   }
 }
 
+interface VirtualListHandle {
+  scrollToIndex: (index: number, options?: { align: 'start' | 'center' | 'end' }) => void;
+}
+
 interface VirtualListProps<T> {
-  items: T[];
+  items: T[] | Signal<T[]>;
   height: number;
   overscan?: number;
   estimatedItemHeight?: number;
-  scrollToIndex?: number;
   children: (item: T, index: number) => React.ReactElement;
 }
 
 export const VirtualList = forwardRef(function <T>(
   {
-    items,
+    items: itemsProp,
     height,
     overscan = 5,
     estimatedItemHeight = 40,
-    scrollToIndex,
     children,
   }: VirtualListProps<T>,
-  ref: React.Ref<HTMLDivElement>
+  ref: React.Ref<VirtualListHandle>
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // alturas e Fenwick em refs para não causar re-render em cada update
-  const heightsRef = useRef<number[]>(items.map(() => estimatedItemHeight));
-  const fenwickRef = useRef<Fenwick>(new Fenwick(items.length));
-  const [scrollTop, setScrollTop] = useState(0);
-  // forçar re-render quando a árvore muda em um ponto importante
-  const [, bump] = useState({});
+  // Use a reactive value for the items list
+  const items = isSignal(itemsProp) ? useSignalValue(itemsProp) : itemsProp;
 
-  // inicializa Fenwick na mount e quando `items` ou `estimatedItemHeight` mudar
-  useEffect(() => {
-    // Ensure we have valid items
-    if (items.length > 0) {
-      heightsRef.current = items.map(() => estimatedItemHeight);
-      fenwickRef.current = new Fenwick(items.length);
-      fenwickRef.current.init(heightsRef.current);
-      bump({});
-    } else {
-      // Handle empty items case
-      heightsRef.current = [];
-      fenwickRef.current = new Fenwick(0);
-      bump({});
+  const [scrollTop, setScrollTop] = useState(0);
+
+  // Store heights and the Fenwick tree in refs to avoid re-renders on every measurement
+  const measuredHeights = useRef<Map<React.Key, number>>(new Map());
+  const fenwickRef = useRef<Fenwick>(new Fenwick(items.length));
+
+  // Recalculate total height whenever items or their heights change
+  const totalHeight = useMemo(() => {
+    fenwickRef.current = new Fenwick(items.length);
+    let total = 0;
+    for (let i = 0; i < items.length; i++) {
+      const key = (items[i] as any).id ?? i;
+      const h = measuredHeights.current.get(key) ?? estimatedItemHeight;
+      fenwickRef.current.update(i, h);
+      total += h;
     }
+    return total;
   }, [items, estimatedItemHeight]);
 
-  // medida completa: inclui margin, border, padding
-  const measure = useCallback((el: Element): number => {
-    const r = (el as HTMLElement).getBoundingClientRect().height;
-    const s = getComputedStyle(el as Element);
-    const m =
-      (parseFloat(s.marginTop) || 0) + (parseFloat(s.marginBottom) || 0);
-    return r + m;
+  // Handle scroll events
+  const onScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
   }, []);
 
-  // ResizeObserver para todos os itens renderizados
-  const ro = useRef<ResizeObserver>();
-  useEffect(() => {
-    ro.current = new ResizeObserver((entries) => {
-      let hasChanges = false;
-      entries.forEach((ent) => {
-        const idx = Number((ent.target as HTMLElement).dataset.index);
-        if (isNaN(idx) || idx < 0 || idx >= items.length) return;
+  // API for scrolling to a specific index
+  useImperativeHandle(ref, () => ({
+    scrollToIndex: (index, options = { align: 'start' }) => {
+      const container = containerRef.current;
+      if (!container) return;
 
-        const h = measure(ent.target);
-        const old = heightsRef.current[idx];
-        if (h > 0 && old !== h) {
-          heightsRef.current[idx] = h;
-          fenwickRef.current.update(idx, h - old);
+      const itemTop = index > 0 ? fenwickRef.current.query(index - 1) : 0;
+      const itemHeight = (measuredHeights.current.get((items[index] as any).id ?? index) ?? estimatedItemHeight);
+
+      let newScrollTop = itemTop;
+
+      if (options.align === 'center') {
+        newScrollTop = itemTop - (container.clientHeight / 2) + (itemHeight / 2);
+      } else if (options.align === 'end') {
+        newScrollTop = itemTop - container.clientHeight + itemHeight;
+      }
+
+      container.scrollTo({ top: newScrollTop, behavior: 'smooth' });
+    }
+  }));
+
+  // Logic to calculate the visible range of items
+  const start = Math.max(0, fenwickRef.current.lowerBound(scrollTop) - overscan);
+  const end = Math.min(items.length, fenwickRef.current.lowerBound(scrollTop + height) + overscan * 2);
+  const paddingTop = start > 0 ? fenwickRef.current.query(start - 1) : 0;
+
+  // Set up a ResizeObserver to measure the actual height of rendered items
+  const observerRef = useRef<ResizeObserver | null>(null);
+
+  useEffect(() => {
+    const ro = new ResizeObserver(entries => {
+      let hasChanges = false;
+      for (const entry of entries) {
+        const index = Number((entry.target as HTMLElement).dataset.index);
+        if (isNaN(index)) continue;
+
+        const key = (items[index] as any).id ?? index;
+        const newHeight = entry.borderBoxSize[0].blockSize;
+
+        if (measuredHeights.current.get(key) !== newHeight) {
+          const oldHeight = measuredHeights.current.get(key) ?? estimatedItemHeight;
+          fenwickRef.current.update(index, newHeight - oldHeight);
+          measuredHeights.current.set(key, newHeight);
           hasChanges = true;
         }
-      });
-
-      // Only trigger re-render if there were actual changes
-      if (hasChanges) {
-        bump({});
+      }
+      if(hasChanges){
+        // Force a re-render to apply the new total height
+        setScrollTop(prev => prev);
       }
     });
-    return () => ro.current?.disconnect();
-  }, [measure, items.length]);
+    observerRef.current = ro;
+    return () => ro.disconnect();
+  }, [items, estimatedItemHeight]);
 
-  // scroll handler
-  useImperativeHandle(ref, () => containerRef.current!);
-  const onScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const newScrollTop = e.currentTarget.scrollTop;
-    // Only update if the scroll position has actually changed
-    if (newScrollTop !== scrollTop) {
-      setScrollTop(newScrollTop);
-    }
-  }, [scrollTop]);
-
-  // scroll to index
-  useEffect(() => {
-    if (scrollToIndex !== undefined && containerRef.current && items.length > 0) {
-      // Ensure scrollToIndex is within bounds
-      const validIndex = Math.max(0, Math.min(scrollToIndex, items.length - 1));
-
-      // Calculate the position to scroll to using the Fenwick tree
-      const position = validIndex > 0 ? fenwickRef.current.query(validIndex - 1) : 0;
-
-      // Add a small offset to ensure the item is fully visible
-      containerRef.current.scrollTop = position;
-
-      // Force a re-render to ensure the correct items are displayed
-      bump({});
-    }
-  }, [scrollToIndex, items.length]);
-
-  // calcula índices visíveis via Fenwick.lowerBound
-  // Ensure we have a valid Fenwick tree and items
-  const hasItems = items.length > 0;
-  const start = hasItems ? Math.max(0, fenwickRef.current.lowerBound(scrollTop) - overscan) : 0;
-  const end = hasItems ? Math.min(
-    items.length,
-    fenwickRef.current.lowerBound(scrollTop + height) + overscan
-  ) : 0;
-
-  // helper pra observar cada nó
   const observe = useCallback(
-    (el: HTMLDivElement | null, idx: number) => {
-      if (el) {
+    (el: HTMLElement | null, idx: number) => {
+      const ro = observerRef.current;
+      if (el && ro) {
         el.dataset.index = String(idx);
-        ro.current?.observe(el);
+        ro.observe(el);
       }
     },
     []
   );
 
-  // altura total
-  const total = hasItems ? fenwickRef.current.query(items.length - 1) : 0;
-
   return (
-    <div
-      ref={containerRef}
-      onScroll={onScroll}
-      style={{ height, overflowY: 'auto' }}
-    >
-      {/* spacer-top */}
-      <div 
-        style={{ 
-          height: start > 0 && hasItems ? Math.max(0, fenwickRef.current.query(start - 1)) : 0,
-          minHeight: 0
-        }} 
-      />
-
-      {items.slice(start, end).map((item, i) => {
-        const idx = start + i;
-        const el = children(item, idx);
-        return React.cloneElement(el, {
-          key: (item as any).id ?? idx,
-          ref: (node: HTMLDivElement) => observe(node, idx),
-        });
-      })}
-
-      {/* spacer-bottom */}
-      <div 
-        style={{ 
-          height: end > 0 && hasItems ? Math.max(0, total - fenwickRef.current.query(end - 1)) : total,
-          minHeight: 0
-        }} 
-      />
+    <div ref={containerRef} onScroll={onScroll} style={{ height, overflowY: 'auto', position: 'relative' }}>
+      <div style={{ height: totalHeight, position: 'relative' }}>
+        <div style={{ transform: `translateY(${paddingTop}px)`, position: 'absolute', width: '100%' }}>
+          {items.slice(start, end).map((item, i) => {
+            const index = start + i;
+            const key = (item as any).id ?? index;
+            const element = children(item, index);
+            return React.cloneElement(element, {
+              key,
+              ref: (node: HTMLElement) => observe(node, index),
+            });
+          })}
+        </div>
+      </div>
     </div>
   );
 });
