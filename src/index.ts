@@ -25,6 +25,10 @@ export * from "./components/ReadableStream";
 export * from "./components/ServiceWorker";
 export * from "./components/Resource";
 export * from "./components/Slot";
+export * from "./components/Store";
+export * from "./components/Deferred";
+
+export * from "./components/OnResize";
 
 export * from "./core/signals";
 export * from "./hooks/useSignal";
