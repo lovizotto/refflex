@@ -15,7 +15,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "incremental": true,
+    //    "incremental": true,
     "types": [
       "node"
     ],
@@ -23,9 +23,7 @@
     "downlevelIteration": true
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "global.d.ts"
+    "src"
   ],
   "exclude": [
     "node_modules"

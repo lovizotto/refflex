@@ -206,6 +206,7 @@ export const VirtualList = forwardRef(function <T>(
           {virtualItems.map((element) => {
             // Clone element to attach the ref for the observer.
             return React.cloneElement(element, {
+              //@ts-ignore
               ref: observe,
               "data-key": element.key,
             });

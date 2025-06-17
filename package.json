@@ -2,17 +2,22 @@
   "name": "refflex",
   "private": false,
   "version": "0.4.1",
-  "type": "module",
   "description": "A declarative UI enhancement library for React apps",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "files": [
     "dist"
   ],
   "peerDependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19"
   },
   "keywords": [
     "react",
@@ -27,21 +32,13 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsup",
     "preview": "vite preview",
     "lint": "eslint . --ext .ts,.tsx",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
-  "dependencies": {
-    "@tailwindcss/postcss": "^4.1.10",
-    "@tailwindcss/vite": "^4.1.10",
-    "postcss": "^8.5.6",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "recharts": "^2.15.3",
-    "refflex": "^0.3.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@chromatic-com/storybook": "^4.0.0",
     "@storybook/addon-a11y": "^9.0.9",
@@ -65,7 +62,13 @@
     "tsup": "^8.5.0",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
-    "vitest": "^3.2.3"
+    "vitest": "^3.2.3",
+    "@tailwindcss/postcss": "^4.1.10",
+    "@tailwindcss/vite": "^4.1.10",
+    "postcss": "^8.5.6",
+    "recharts": "^2.15.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   },
   "eslintConfig": {
     "extends": [

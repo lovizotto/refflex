@@ -59,8 +59,10 @@ export function Cond({ children }: CondProps) {
     // After the guard, 'child' is known to be a ReactElement.
     // Check for the first matching <When> condition.
     if (child.type === When) {
+      // @ts-ignore
       if (child.props.is) {
         // Render its children and exit immediately.
+        // @ts-ignore
         return <>{child.props.children}</>;
       }
       // If the condition is false, continue to the next child.
@@ -76,6 +78,7 @@ export function Cond({ children }: CondProps) {
   // If the loop finished without finding a true <When>, render the <Otherwise> child if it exists.
   // The check here is now type-safe.
   if (isValidElement(otherwiseChild)) {
+    // @ts-ignore
     return <>{otherwiseChild.props.children}</>;
   }
 

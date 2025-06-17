@@ -2,9 +2,10 @@ import { createComputed, createSignal } from "./core/signals";
 import { useState } from "react";
 import ExamplesPage from "./examples/index";
 import { PerformanceBenchmark } from "./components/Benchmark";
-import { Rf } from "./Rf";
+
 import { S } from "./components/S";
 import { Loop } from "./components/Loop";
+import { OnResize } from "./components/OnResize";
 // Assuming Rf is a library of lifecycle components
 
 // --- State Definition (Module Level) ---
@@ -59,7 +60,7 @@ function App() {
       <PerformanceBenchmark />
 
       {/* Lifecycle components that update signals are a great use case. */}
-      <Rf.OnResize
+      <OnResize
         on={({ width, height }) => {
           // This updates the signal without causing this App component to re-render.
           windowSize.set({ width, height });
