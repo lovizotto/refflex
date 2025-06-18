@@ -3,4 +3,4 @@ stories/
 *.test.ts
 .vscode/
 tsconfig.json
-vite.config.ts
+test-app/vite.config.ts

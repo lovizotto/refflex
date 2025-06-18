@@ -27,6 +27,7 @@ export * from "./components/Resource";
 export * from "./components/Slot";
 export * from "./components/Store";
 export * from "./components/Deferred";
+export * from "./components/History";
 
 export * from "./components/OnResize";
 

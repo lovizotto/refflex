@@ -1,27 +1,35 @@
-// components/S.tsx
-import { ReactNode } from 'react';
-import { Signal } from '../core/signals';
-import { useSignalValue } from '../hooks/useSignal';
-
-type SProps = {
-  // It accepts a signal as its child.
-  children: Signal<any>;
-};
+import { Signal } from "../core/signals";
+import { isValidElement, useSyncExternalStore } from "react";
 
 /**
- * A special component that subscribes to a signal and renders its value.
- *
- * This is the key to fine-grained reactivity. The parent component that uses <S>
- * will NOT re-render when the signal changes. Only the <S> component itself,
- * which is extremely lightweight, will update its text content.
- *
- * @example
- * const counter = useSignal(0);
- * return <p>Count: <S>{counter}</S></p>;
+ * A granular component that subscribes to a signal and renders only its value.
+ * This is the key to fine-grained reactivity without re-rendering parent components.
+ * @example <S>{counter}</S>
  */
-export function S({ children: signal }: SProps): ReactNode {
-  // Subscribes this tiny component to the signal.
-  const value = useSignalValue(signal);
-  // Renders the primitive value directly. React is highly optimized for this.
-  return value;
+export function S<T>({ children }: { children: Signal<T> }) {
+  const synchronizedValue = useSyncExternalStore(
+    children._subscribe,
+    children._getSnapshot,
+    children._getSnapshot, // server snapshot
+  );
+  // React can render most primitives, null, undefined, and arrays.
+  // The primary cause of crashes is trying to render a plain object.
+  // We check for this specific case to prevent the app from crashing and provide a helpful warning.
+  if (
+    typeof synchronizedValue === "object" &&
+    synchronizedValue !== null &&
+    !isValidElement(synchronizedValue) &&
+    !Array.isArray(synchronizedValue)
+  ) {
+    console.warn(
+      "Warning: The <S> component received a plain object, which cannot be rendered. " +
+        "Consider using `useComputed` to extract a primitive value (string, number) from the object.",
+      synchronizedValue,
+    );
+    // Return null to prevent the crash.
+    return null;
+  }
+
+  // The value is safe to render. We cast to ReactNode for type safety.
+  return <>{synchronizedValue}</>;
 }
